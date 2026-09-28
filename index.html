@@ -17,7 +17,7 @@
 body.resizing{cursor:col-resize;user-select:none}
 .ideaSteps{padding:18px;border-bottom:1px solid #2a2d35}.steps{display:flex;gap:8px;margin-top:10px}.step{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#2a2d35;color:#9aa0ad;font-weight:800}.step.active{background:#3478f6;color:#fff}.step.done{background:#34c759;color:#fff}
 .chat{padding:18px;flex:1;overflow:auto}.msg{max-width:92%;padding:12px 14px;border-radius:16px;margin:10px 0;line-height:1.4;font-size:14px}.ai{background:#252832;color:#fff}.user{background:#3478f6;color:#fff;margin-left:auto}.decisions{margin-top:18px;background:#20232b;border-radius:16px;padding:14px}.decisions h3{margin:0 0 10px;font-size:15px}.decision{font-size:13px;color:#c9ccd4;margin:7px 0}
-.properties{display:none;border-top:1px solid #2a2d35;background:#1d2027;padding:14px}.properties.show{display:block}.propertiesHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}.propertiesHead strong{font-size:14px}.propertiesHead .spacer{flex:1}.propClose{border:0;background:#2a2d35;color:#fff;border-radius:9px;width:28px;height:28px;cursor:pointer}.propGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.prop{background:#252832;border-radius:12px;padding:9px}.prop.wide{grid-column:1/-1}.prop label{display:block;font-size:11px;color:#aeb4c0;margin-bottom:6px}.prop input[type=number],.prop input[type=text],.prop select{width:100%;border:0;border-radius:8px;background:#17191f;color:#fff;padding:8px}.prop input[type=color]{width:100%;height:34px;border:0;background:transparent;padding:0}.propToggle{display:flex;align-items:center;justify-content:space-between;gap:8px}.propToggle input{transform:scale(1.15)}.selectable{cursor:pointer;outline:2px solid transparent;outline-offset:3px;border-radius:6px}.selectable:hover{outline-color:#3478f688}.selectable.selected{outline-color:#34c759;box-shadow:0 0 0 4px #34c75922}
+.properties{display:none;border-top:1px solid #2a2d35;background:#1d2027;padding:14px}.properties.show{display:block}.propertiesHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}.propertiesHead strong{font-size:14px}.propertiesHead .spacer{flex:1}.propClose{border:0;background:#2a2d35;color:#fff;border-radius:9px;width:28px;height:28px;cursor:pointer}.propGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.prop{background:#252832;border-radius:12px;padding:9px}.prop.wide{grid-column:1/-1}.prop label{display:block;font-size:11px;color:#aeb4c0;margin-bottom:6px}.prop input[type=number],.prop input[type=text],.prop select{width:100%;border:0;border-radius:8px;background:#17191f;color:#fff;padding:8px}.prop input[type=color]{width:100%;height:34px;border:0;background:transparent;padding:0}.propToggle{display:flex;align-items:center;justify-content:space-between;gap:8px}.propToggle input{transform:scale(1.15)}.selectable{cursor:pointer;outline:2px solid transparent;outline-offset:3px;border-radius:6px}.selectable:hover{outline-color:#3478f688}.selectable.selected{outline-color:#34c759;box-shadow:0 0 0 4px #34c75922}.preview-mode .selectable{outline:none!important;box-shadow:none!important}.preview-mode .selectable:hover{outline:none!important}.demoList{margin-top:10px}.demoItem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid #eceef2;font-size:13px}.demoItem:last-child{border-bottom:0}.demoItem button{border:0;background:#eef0f4;border-radius:9px;padding:6px 8px;cursor:pointer}.modeChip{cursor:pointer;font-weight:700}
 .inputbar{padding:14px;border-top:1px solid #2a2d35;display:flex;gap:8px}.inputbar input{flex:1;border:0;border-radius:14px;padding:12px;background:#252832;color:#fff}.send{width:44px;border:0;border-radius:14px;background:#3478f6;color:#fff;font-size:18px}
 .previewArea{padding:22px 34px 22px 28px;display:flex;flex-direction:column;align-items:stretch;gap:18px;overflow:auto}
 .previewTop{width:100%;display:flex;align-items:center;gap:12px}.previewTitle{font-size:18px;font-weight:800}.chip{font-size:12px;background:#fff;border:1px solid #dfe3e8;border-radius:999px;padding:7px 10px;color:#666}
@@ -159,7 +159,7 @@ body.resizing{cursor:col-resize;user-select:none}
   <section class="previewArea">
     <div class="previewTop">
       <div class="previewTitle">Anteprima della tua App</div>
-      <div class="chip">Aggiornamento live</div>
+      <div class="chip modeChip" id="modeChip">Modalità modifica</div>
       <div class="spacer"></div>
       <div class="chip">iPhone</div>
     </div>
@@ -175,7 +175,7 @@ body.resizing{cursor:col-resize;user-select:none}
           <h2 class="selectable" data-edit-key="whereTitle" data-edit-label="Dove sto andando">Dove sto andando?</h2>
           <div style="font-size:13px;opacity:.88">Scegli un luogo e vedrai solo ciò che devi comprare lì.</div>
           <div class="select selectable" data-edit-key="placeSelect" data-edit-label="Selettore luogo">Tutti i luoghi ▾</div>
-          <div class="whiteBtn selectable" data-edit-key="showShoppingBtn" data-edit-label="Pulsante Mostra cosa comprare">Mostra cosa comprare</div>
+          <div class="whiteBtn selectable" id="showShoppingBtn" data-edit-key="showShoppingBtn" data-edit-label="Pulsante Mostra cosa comprare">Mostra cosa comprare</div>
         </div>
 
         <div class="card selectable" data-edit-key="frequentCard" data-edit-label="Card Acquisti frequenti">
@@ -190,7 +190,12 @@ body.resizing{cursor:col-resize;user-select:none}
             <div class="field selectable" data-edit-key="whereField" data-edit-label="Campo Dove">Dove ▾</div>
             <div class="field selectable" data-edit-key="whenField" data-edit-label="Campo Quando">Quando</div>
           </div>
-          <div class="whiteBtn selectable" data-edit-key="addShoppingBtn" data-edit-label="Pulsante Aggiungi alla spesa">Aggiungi alla spesa</div>
+          <div class="whiteBtn selectable" id="addShoppingBtn" data-edit-key="addShoppingBtn" data-edit-label="Pulsante Aggiungi alla spesa">Aggiungi alla spesa</div>
+        </div>
+
+        <div class="card" id="shoppingListCard" style="display:none">
+          <h3>Prodotti da acquistare</h3>
+          <div class="demoList" id="shoppingList"></div>
         </div>
 
         </div>
@@ -218,11 +223,11 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="card selectable" data-edit-key="placesManageCard" data-edit-label="Card Gestione luoghi">
             <h3 class="selectable" data-edit-key="placesManageTitle" data-edit-label="Gestione luoghi">Gestione luoghi</h3>
             <div class="field">Es. Coop, Farmacia, Mercato…</div>
-            <div class="addbtn selectable" data-edit-key="addPlaceBtn" data-edit-label="Pulsante Aggiungi luogo">Aggiungi luogo</div>
+            <div class="addbtn selectable" id="addPlaceBtn" data-edit-key="addPlaceBtn" data-edit-label="Pulsante Aggiungi luogo">Aggiungi luogo</div>
           </div>
           <div class="card selectable" data-edit-key="yourPlacesCard" data-edit-label="Card I tuoi luoghi">
             <h3 class="selectable" data-edit-key="yourPlacesTitle" data-edit-label="I tuoi luoghi">I tuoi luoghi</h3>
-            <div style="color:#8e8e93;font-size:13px">I luoghi aggiunti compariranno qui.</div>
+            <div style="color:#8e8e93;font-size:13px" id="placesEmpty">I luoghi aggiunti compariranno qui.</div><div class="demoList" id="placesList"></div>
           </div>
         </div>
 
@@ -232,7 +237,7 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="card selectable" data-edit-key="recipeCard" data-edit-label="Card Aggiungi da ricetta">
             <h3 class="selectable" data-edit-key="recipeAddTitle" data-edit-label="Aggiungi da ricetta">Aggiungi da ricetta</h3>
             <div class="field selectable" data-edit-key="recipeField" data-edit-label="Campo Ricetta">Incolla una ricetta o scegli una foto…</div>
-            <div class="addbtn selectable" data-edit-key="findIngredientsBtn" data-edit-label="Pulsante Trova ingredienti">Trova ingredienti</div>
+            <div class="addbtn selectable" id="findIngredientsBtn" data-edit-key="findIngredientsBtn" data-edit-label="Pulsante Trova ingredienti">Trova ingredienti</div><div class="demoList" id="ingredientsList"></div>
           </div>
         </div>
 
@@ -248,7 +253,7 @@ body.resizing{cursor:col-resize;user-select:none}
     <div class="controls">
       <button class="ctl" id="copyLinkBtn">Condividi link</button>
       <button class="ctl" id="showQrBtn">Mostra QR</button>
-      <button class="ctl" id="previewBtn">Anteprima</button>
+      <button class="ctl" id="previewBtn">Prova App</button>
       <button class="ctl primary" id="generateBtn">Genera la mia App</button>
     </div>
   </section>
@@ -277,6 +282,7 @@ const featureState={history:false,recipes:false,share:false};
 const PROJECT_KEY='ideainapp_demo_project_v1';
 const projectState=JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}');
 projectState.styles=projectState.styles||{};
+projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
 function saveProjectState(){localStorage.setItem(PROJECT_KEY,JSON.stringify(projectState))}
 
 function toast(msg){
@@ -440,13 +446,85 @@ function updateSelectedStyle(){
   saveProjectState();
 }
 [propText,propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom,propBackgroundColor,propRadius,propBorderWidth,propBorderColor,propWidth,propMinHeight,propVisible].forEach(x=>x.addEventListener('input',updateSelectedStyle));
-document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();selectEditable(el)}));
+let previewMode=false;
+document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click',e=>{
+  if(previewMode)return;
+  e.stopPropagation();
+  selectEditable(el);
+}));
 document.getElementById('closePropertiesBtn').onclick=()=>{
   if(selectedEditable)selectedEditable.classList.remove('selected');
   selectedEditable=null;
   propertiesPanel.classList.remove('show');
 };
 applySavedElementStyles();
+
+function renderDemoData(){
+  const list=document.getElementById('shoppingList');
+  const card=document.getElementById('shoppingListCard');
+  if(list&&card){
+    list.innerHTML='';
+    projectState.demo.items.forEach((item,i)=>{
+      const row=document.createElement('div');row.className='demoItem';
+      row.innerHTML='<span>'+item+'</span><button data-i="'+i+'">✓</button>';
+      row.querySelector('button').onclick=()=>{projectState.demo.items.splice(i,1);saveProjectState();renderDemoData()};
+      list.appendChild(row);
+    });
+    card.style.display=projectState.demo.items.length?'block':'none';
+  }
+  const places=document.getElementById('placesList');
+  const empty=document.getElementById('placesEmpty');
+  if(places&&empty){
+    places.innerHTML='';
+    projectState.demo.places.forEach(p=>{const row=document.createElement('div');row.className='demoItem';row.innerHTML='<span>📍 '+p+'</span>';places.appendChild(row)});
+    empty.style.display=projectState.demo.places.length?'none':'block';
+  }
+  const ingredients=document.getElementById('ingredientsList');
+  if(ingredients){
+    ingredients.innerHTML='';
+    projectState.demo.ingredients.forEach(p=>{const row=document.createElement('div');row.className='demoItem';row.innerHTML='<span>• '+p+'</span>';ingredients.appendChild(row)});
+  }
+}
+renderDemoData();
+
+function requirePreview(){
+  if(previewMode)return true;
+  toast('Premi “Prova App” per usare i pulsanti');
+  return false;
+}
+document.getElementById('showShoppingBtn').addEventListener('click',e=>{
+  if(!previewMode)return;
+  e.stopPropagation();
+  document.getElementById('shoppingListCard').style.display='block';
+  document.getElementById('shoppingListCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+});
+document.getElementById('addShoppingBtn').addEventListener('click',e=>{
+  if(!previewMode)return;
+  e.stopPropagation();
+  const name=prompt('Quale prodotto vuoi aggiungere?');
+  if(!name||!name.trim())return;
+  projectState.demo.items.push(name.trim());
+  saveProjectState();renderDemoData();
+  toast('Prodotto aggiunto');
+});
+document.getElementById('addPlaceBtn').addEventListener('click',e=>{
+  if(!previewMode)return;
+  e.stopPropagation();
+  const name=prompt('Nome del luogo');
+  if(!name||!name.trim())return;
+  projectState.demo.places.push(name.trim());
+  saveProjectState();renderDemoData();
+  toast('Luogo aggiunto');
+});
+document.getElementById('findIngredientsBtn').addEventListener('click',e=>{
+  if(!previewMode)return;
+  e.stopPropagation();
+  const text=prompt('Incolla ingredienti separati da virgola o vai a capo');
+  if(!text||!text.trim())return;
+  projectState.demo.ingredients=text.split(/[,\n]+/).map(x=>x.trim()).filter(Boolean);
+  saveProjectState();renderDemoData();
+  toast('Ingredienti trovati');
+});
 
 const monthNames=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 let calendarDate=new Date(projectState.calendarYear??2026,projectState.calendarMonth??8,1);
@@ -503,12 +581,25 @@ document.getElementById('copyLinkBtn').onclick=copyLink;
 document.getElementById('copyModalLinkBtn').onclick=copyLink;
 document.getElementById('closeModalBtn').onclick=()=>shareModal.classList.add('hidden');
 shareModal.addEventListener('click',e=>{if(e.target===shareModal)shareModal.classList.add('hidden')});
-document.getElementById('previewBtn').onclick=()=>document.querySelector('.phone').scrollIntoView({behavior:'smooth',block:'center'});
+document.getElementById('previewBtn').onclick=()=>{
+  previewMode=!previewMode;
+  document.querySelector('.phone').classList.toggle('preview-mode',previewMode);
+  document.getElementById('previewBtn').textContent=previewMode?'Torna a Modifica':'Prova App';
+  document.getElementById('modeChip').textContent=previewMode?'Modalità prova':'Modalità modifica';
+  if(previewMode){
+    if(selectedEditable)selectedEditable.classList.remove('selected');
+    propertiesPanel.classList.remove('show');
+    toast('Modalità prova attiva');
+  }else{
+    toast('Modalità modifica attiva');
+  }
+};
 function generated(){
   addDecision('App pronta per la pubblicazione');
   openShare('La tua App è pronta');
   document.getElementById('modalText').textContent='Questa è ancora una demo: il prossimo passo collegherà salvataggio, IA e pubblicazione reale.';
 }
+document.getElementById('modeChip').onclick=()=>document.getElementById('previewBtn').click();
 document.getElementById('generateBtn').onclick=generated;
 document.getElementById('publishBtn').onclick=generated;
 
