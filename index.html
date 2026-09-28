@@ -99,6 +99,14 @@ body.resizing{cursor:col-resize;user-select:none}
           <input type="color" id="propColor">
         </div>
         <div class="prop">
+          <label>Allineamento</label>
+          <select id="propTextAlign">
+            <option value="left">Sinistra</option>
+            <option value="center">Centro</option>
+            <option value="right">Destra</option>
+          </select>
+        </div>
+        <div class="prop">
           <label>Spazio sopra</label>
           <input type="number" id="propMarginTop" min="0" max="80" step="1">
         </div>
@@ -324,6 +332,7 @@ const selectedElementName=document.getElementById('selectedElementName');
 const propFontSize=document.getElementById('propFontSize');
 const propFontWeight=document.getElementById('propFontWeight');
 const propColor=document.getElementById('propColor');
+const propTextAlign=document.getElementById('propTextAlign');
 const propMarginTop=document.getElementById('propMarginTop');
 const propMarginBottom=document.getElementById('propMarginBottom');
 
@@ -351,6 +360,7 @@ function selectEditable(el){
   const fw=parseInt(cs.fontWeight)||400;
   propFontWeight.value=[400,600,700,800].reduce((a,b)=>Math.abs(b-fw)<Math.abs(a-fw)?b:a,400);
   propColor.value=rgbToHex(cs.color);
+  propTextAlign.value=cs.textAlign==='center'?'center':(cs.textAlign==='right'?'right':'left');
   propMarginTop.value=parseInt(cs.marginTop)||0;
   propMarginBottom.value=parseInt(cs.marginBottom)||0;
 }
@@ -360,6 +370,7 @@ function updateSelectedStyle(){
     fontSize:propFontSize.value+'px',
     fontWeight:propFontWeight.value,
     color:propColor.value,
+    textAlign:propTextAlign.value,
     marginTop:propMarginTop.value+'px',
     marginBottom:propMarginBottom.value+'px'
   };
@@ -367,7 +378,7 @@ function updateSelectedStyle(){
   projectState.styles[selectedEditable.dataset.editKey]=style;
   saveProjectState();
 }
-[propFontSize,propFontWeight,propColor,propMarginTop,propMarginBottom].forEach(x=>x.addEventListener('input',updateSelectedStyle));
+[propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom].forEach(x=>x.addEventListener('input',updateSelectedStyle));
 document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();selectEditable(el)}));
 document.getElementById('closePropertiesBtn').onclick=()=>{
   if(selectedEditable)selectedEditable.classList.remove('selected');
