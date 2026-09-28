@@ -224,7 +224,7 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="sub selectable" data-edit-key="placesSubtitle" data-edit-label="Sottotitolo Luoghi">Gestisci supermercati, farmacia e altri posti.</div>
           <div class="card selectable" data-edit-key="placesManageCard" data-edit-label="Card Gestione luoghi">
             <h3 class="selectable" data-edit-key="placesManageTitle" data-edit-label="Gestione luoghi">Gestione luoghi</h3>
-            <div class="field">Es. Coop, Farmacia, Mercato…</div>
+            <input class="field" id="placeNameInput" placeholder="Es. Coop, Farmacia, Mercato…" style="width:100%;border:0">
             <div class="addbtn selectable" id="addPlaceBtn" data-edit-key="addPlaceBtn" data-edit-label="Pulsante Aggiungi luogo">Aggiungi luogo</div>
           </div>
           <div class="card selectable" data-edit-key="yourPlacesCard" data-edit-label="Card I tuoi luoghi">
@@ -528,16 +528,20 @@ document.getElementById('addShoppingBtn').addEventListener('click',e=>{
 document.getElementById('addPlaceBtn').addEventListener('click',e=>{
   if(!previewMode)return;
   e.stopPropagation();
-  const name=prompt('Nome del luogo');
-  if(!name||!name.trim())return;
-  const clean=name.trim();
+  const input=document.getElementById('placeNameInput');
+  const clean=(input.value||'').trim();
+  if(!clean){toast('Scrivi prima il nome del luogo');input.focus();return}
   if(!projectState.demo.places.includes(clean))projectState.demo.places.push(clean);
+  input.value='';
   saveProjectState();renderDemoData();
   const placeSelect=document.getElementById('placeSelect');
   const whereField=document.getElementById('whereField');
   if(placeSelect)placeSelect.value=clean;
   if(whereField)whereField.value=clean;
   toast('Luogo aggiunto al mockup');
+});
+document.getElementById('placeNameInput').addEventListener('keydown',e=>{
+  if(previewMode&&e.key==='Enter'){e.preventDefault();document.getElementById('addPlaceBtn').click()}
 });
 document.getElementById('findIngredientsBtn').addEventListener('click',e=>{
   if(!previewMode)return;
