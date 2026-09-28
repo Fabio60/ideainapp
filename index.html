@@ -568,9 +568,16 @@ function executeBuilderAction(a){
   if(['show','hide','toggle','setText'].includes(a.type) && a.target){
     const target=document.querySelector('[data-builder-id="'+a.target+'"]');
     if(target){
-      if(a.type==='show')target.style.display='';
+      if(a.type==='show'){
+        target.style.display='block';
+        requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
+      }
       if(a.type==='hide')target.style.display='none';
-      if(a.type==='toggle')target.style.display=target.style.display==='none'?'':'none';
+      if(a.type==='toggle'){
+        const hidden=getComputedStyle(target).display==='none';
+        target.style.display=hidden?'block':'none';
+        if(hidden)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
+      }
       if(a.type==='setText'){
         const bodyEl=target.querySelector('.builderBody');
         if(bodyEl)bodyEl.textContent=a.value||'';
@@ -660,9 +667,16 @@ function renderBuilder(){
               if(['show','hide','toggle','setText'].includes(a.type) && a.target){
                 const target=document.querySelector('[data-builder-id="'+a.target+'"]');
                 if(target){
-                  if(a.type==='show')target.style.display='';
+                  if(a.type==='show'){
+                    target.style.display='block';
+                    requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
+                  }
                   if(a.type==='hide')target.style.display='none';
-                  if(a.type==='toggle')target.style.display=target.style.display==='none'?'':'none';
+                  if(a.type==='toggle'){
+                    const hidden=getComputedStyle(target).display==='none';
+                    target.style.display=hidden?'block':'none';
+                    if(hidden)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
+                  }
                   if(a.type==='setText'){
                     const bodyEl=target.querySelector('.builderBody');
                     if(bodyEl)bodyEl.textContent=a.value||'';
@@ -782,9 +796,16 @@ function renderBuilder(){
           if(['show','hide','toggle','setText'].includes(a.type) && a.target){
             const target=document.querySelector('[data-builder-id="'+a.target+'"]');
             if(target){
-              if(a.type==='show')target.style.display='';
+              if(a.type==='show'){
+                target.style.display='block';
+                requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
+              }
               if(a.type==='hide')target.style.display='none';
-              if(a.type==='toggle')target.style.display=target.style.display==='none'?'':'none';
+              if(a.type==='toggle'){
+                const hidden=getComputedStyle(target).display==='none';
+                target.style.display=hidden?'block':'none';
+                if(hidden)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
+              }
               if(a.type==='setText'){
                 const bodyEl=target.querySelector('.builderBody');
                 if(bodyEl)bodyEl.textContent=a.value||'';
@@ -999,6 +1020,7 @@ function applyRequest(raw){
         listCmp=componentDefaults('list');
         listCmp.label='Lista Preferiti';
         listCmp.items=['Preferito 1','Preferito 2','Preferito 3'];
+        listCmp.text='Preferiti';
         projectState.components[active].push(listCmp);
       }
       projectState.actions[navCmp.id+':'+navIndex]={type:'show',target:listCmp.id,value:''};
