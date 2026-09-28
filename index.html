@@ -806,7 +806,7 @@ function renderBuilder(){
     blank.classList.toggle('has-components',count>0);
   }
 }
-function addSuperComponent(kind,screen=activeScreenName()){
+function addSuperComponent(kind,screen=activeScreenName(),silent=false){
   if(projectState.projectMode==='blank')screen='NuovaIdea';
   projectState.components[screen]=projectState.components[screen]||[];
   const push=(type,patch={})=>{const x=componentDefaults(type);Object.assign(x,patch);projectState.components[screen].push(x);return x};
@@ -837,7 +837,7 @@ function addSuperComponent(kind,screen=activeScreenName()){
     push('bottomnav',{items:['Home','Cerca','Preferiti','Altro']});
   }
   saveProjectState();renderBuilder();
-  addMsg('Ho aggiunto il super-mattoncino '+kind+'. Puoi modificare ogni elemento singolarmente.');
+  if(!silent)addMsg('Ho aggiunto il super-mattoncino '+kind+'. Puoi modificare ogni elemento singolarmente.');
 }
 document.querySelectorAll('[data-add-component]').forEach(btn=>btn.onclick=()=>addBuilderComponent(btn.dataset.addComponent));
 document.querySelectorAll('[data-add-super]').forEach(btn=>btn.onclick=()=>addSuperComponent(btn.dataset.addSuper));
@@ -909,17 +909,16 @@ function applyRequest(raw){
   const count=countMatch?Math.max(1,Math.min(12,Number(countMatch[1]))):1;
   const addMany=(type,label,n=count)=>{
     for(let i=0;i<n;i++)addBuilderComponent(type,active,true);
-    addMsg('Ho aggiunto '+n+' '+label+(n>1?'':'')+' nella schermata '+active+'.');
     activated.push(n+' '+label);
   };
   const radioMatch=normalized.match(/(?:aggiungi|crea).*?(\d+)\s*(?:pallini|radio|opzioni)/);
 
-  if(/(?:header completo|barra superiore completa|hamburger.*lente|lente.*hamburger)/.test(normalized)){addSuperComponent('appheader',active);activated.push('header app');
-  }else if(/(?:ricerca.*risultati|cerca.*risultati)/.test(normalized)){addSuperComponent('searchresults',active);activated.push('ricerca con risultati');
-  }else if(/(?:dashboard|cruscotto)/.test(normalized)){addSuperComponent('dashboard',active);activated.push('dashboard');
-  }else if(/(?:modulo|form).*?(?:nome|dati|campi)/.test(normalized)){addSuperComponent('form',active);activated.push('modulo dati');
-  }else if(/(?:luoghi.*mappa|mappa.*luoghi)/.test(normalized)){addSuperComponent('places',active);activated.push('luoghi e mappa');
-  }else if(/(?:navigazione completa|header.*menu basso|menu basso.*header)/.test(normalized)){addSuperComponent('navapp',active);activated.push('navigazione completa');
+  if(/(?:header completo|barra superiore completa|hamburger.*lente|lente.*hamburger)/.test(normalized)){addSuperComponent('appheader',active,true);activated.push('header app');
+  }else if(/(?:ricerca.*risultati|cerca.*risultati)/.test(normalized)){addSuperComponent('searchresults',active,true);activated.push('ricerca con risultati');
+  }else if(/(?:dashboard|cruscotto)/.test(normalized)){addSuperComponent('dashboard',active,true);activated.push('dashboard');
+  }else if(/(?:modulo|form).*?(?:nome|dati|campi)/.test(normalized)){addSuperComponent('form',active,true);activated.push('modulo dati');
+  }else if(/(?:luoghi.*mappa|mappa.*luoghi)/.test(normalized)){addSuperComponent('places',active,true);activated.push('luoghi e mappa');
+  }else if(/(?:navigazione completa|header.*menu basso|menu basso.*header)/.test(normalized)){addSuperComponent('navapp',active,true);activated.push('navigazione completa');
   }else if(/(?:lente|ricerca|search)/.test(normalized)&&/(?:aggiungi|crea|metti|inserisci)/.test(normalized)){addBuilderComponent('search',active,true);activated.push('ricerca');
   }else if(/(?:hamburger|3 trattini|tre trattini)/.test(normalized)){addBuilderComponent('hamburger',active,true);activated.push('menu hamburger');
   }else if(/(?:menu laterale|drawer)/.test(normalized)){addBuilderComponent('drawer',active,true);activated.push('menu laterale');
@@ -975,7 +974,7 @@ function applyRequest(raw){
     activated.push('storico acquisti');
     switchPhoneScreen('Storico');
   }
-  if(/ricett|ingredien|foto/.test(t)){
+  if(/ricett|ingredien/.test(t)){
     featureState.recipes=true;
     addDecision('Ricette e ingredienti');
     activated.push('ricette');
@@ -995,7 +994,7 @@ function applyRequest(raw){
     const phone=document.querySelector('.phone');
     phone.classList.add('updated');
     setTimeout(()=>phone.classList.remove('updated'),900);
-    addMsg('Ho aggiunto '+activated.join(', ')+'. Guarda l’anteprima a destra: il progetto si aggiorna mentre definiamo l’idea.');
+    addMsg('Fatto: '+activated.join(', ')+'. Guarda l’anteprima a destra.');
   }else{
     addMsg('Non ho ancora interpretato questa istruzione. Prova a descrivere il componente e dove deve stare, per esempio: “4 pulsanti in basso”, “2 campi testo”, “un date picker” o “un riquadro”.');
   }
