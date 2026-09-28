@@ -22,7 +22,7 @@ body.resizing{cursor:col-resize;user-select:none}
 .previewArea{padding:22px 34px 22px 28px;display:flex;flex-direction:column;align-items:stretch;gap:18px;overflow:auto}
 .previewTop{width:100%;display:flex;align-items:center;gap:12px}.previewTitle{font-size:18px;font-weight:800}.chip{font-size:12px;background:#fff;border:1px solid #dfe3e8;border-radius:999px;padding:7px 10px;color:#666}
 .phone{width:390px;max-width:100%;border:12px solid #111318;border-radius:42px;background:#fff;box-shadow:0 24px 60px #0002;overflow:hidden;margin-left:auto;margin-right:6%;transition:.2s}.phone.updated{box-shadow:0 0 0 5px #34c75955,0 24px 60px #0002;transform:scale(1.01)}.phoneTop{height:30px;background:#111318;position:relative}.phoneTop:after{content:"";position:absolute;left:50%;top:7px;transform:translateX(-50%);width:90px;height:16px;border-radius:10px;background:#000}
-.phoneBody{padding:18px;background:#f2f2f7;height:690px;display:flex;flex-direction:column;overflow:hidden}.appTitle{font-size:32px;font-weight:850;letter-spacing:-1px}.sub{color:#6e6e73;margin-top:3px}.hero{background:#007aff;color:#fff;border-radius:22px;padding:16px;margin-top:18px}.hero h2{margin:0 0 6px;font-size:21px}.select,.field{background:#fff;color:#111;border-radius:14px;padding:13px;margin-top:10px}.whiteBtn{background:#fff;color:#007aff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.card{background:#fff;border-radius:20px;padding:15px;margin-top:14px}.card h3{margin:0 0 10px}.row{display:flex;gap:8px}.row .field{flex:1;background:#f2f2f7}.addbtn{background:#007aff;color:#fff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.appScreen{display:none;flex:1;min-height:0;overflow-y:auto;padding-right:2px}.appScreen.active{display:block}
+.phoneBody{padding:18px;background:#f2f2f7;height:690px;display:flex;flex-direction:column;overflow:hidden}.appTitle{font-size:32px;font-weight:850;letter-spacing:-1px}.sub{color:#6e6e73;margin-top:3px}.hero{background:#007aff;color:#fff;border-radius:22px;padding:16px;margin-top:18px}.hero h2{margin:0 0 6px;font-size:21px}.select,.field{background:#fff;color:#111;border-radius:14px;padding:13px;margin-top:10px;font:inherit}.whiteBtn{background:#fff;color:#007aff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.card{background:#fff;border-radius:20px;padding:15px;margin-top:14px}.card h3{margin:0 0 10px}.row{display:flex;gap:8px}.row .field{flex:1;background:#f2f2f7}.addbtn{background:#007aff;color:#fff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.appScreen{display:none;flex:1;min-height:0;overflow-y:auto;padding-right:2px}.appScreen.active{display:block}
 #calendarTitle{font-size:18px;line-height:1.1;white-space:nowrap;flex:1;text-align:center}
 #calendarGrid{font-size:10px}
 #calendarGrid .field{font-size:13px;padding:6px 0!important;min-height:34px}
@@ -187,7 +187,9 @@ body.resizing{cursor:col-resize;user-select:none}
           <h3 class="selectable" data-edit-key="addProductTitle" data-edit-label="Aggiungi prodotto">Aggiungi prodotto</h3>
           <div class="field selectable" data-edit-key="productField" data-edit-label="Campo prodotto">Es. latte, pane, detersivo…</div>
           <div class="row">
-            <div class="field selectable" data-edit-key="whereField" data-edit-label="Campo Dove">Dove ▾</div>
+            <select class="field selectable" id="whereField" data-edit-key="whereField" data-edit-label="Campo Dove" style="border:0">
+              <option value="">Dove</option>
+            </select>
             <div class="field selectable" data-edit-key="whenField" data-edit-label="Campo Quando">Quando</div>
           </div>
           <div class="whiteBtn selectable" id="addShoppingBtn" data-edit-key="addShoppingBtn" data-edit-label="Pulsante Aggiungi alla spesa">Aggiungi alla spesa</div>
@@ -476,9 +478,25 @@ function renderDemoData(){
   const empty=document.getElementById('placesEmpty');
   if(places&&empty){
     places.innerHTML='';
-    projectState.demo.places.forEach(p=>{const row=document.createElement('div');row.className='demoItem';row.innerHTML='<span>📍 '+p+'</span>';places.appendChild(row)});
+    projectState.demo.places.forEach((p,i)=>{
+      const row=document.createElement('div');row.className='demoItem';
+      row.innerHTML='<span>📍 '+p+'</span><button data-i="'+i+'">×</button>';
+      row.querySelector('button').onclick=()=>{projectState.demo.places.splice(i,1);saveProjectState();renderDemoData()};
+      places.appendChild(row);
+    });
     empty.style.display=projectState.demo.places.length?'none':'block';
   }
+  const placeSelect=document.getElementById('placeSelect');
+  const whereField=document.getElementById('whereField');
+  [placeSelect,whereField].forEach((sel,idx)=>{
+    if(!sel)return;
+    const current=sel.value;
+    sel.innerHTML=idx===0?'<option value="">Tutti i luoghi</option>':'<option value="">Dove</option>';
+    projectState.demo.places.forEach(p=>{
+      const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);
+    });
+    if([...sel.options].some(o=>o.value===current))sel.value=current;
+  });
   const ingredients=document.getElementById('ingredientsList');
   if(ingredients){
     ingredients.innerHTML='';
@@ -512,9 +530,14 @@ document.getElementById('addPlaceBtn').addEventListener('click',e=>{
   e.stopPropagation();
   const name=prompt('Nome del luogo');
   if(!name||!name.trim())return;
-  projectState.demo.places.push(name.trim());
+  const clean=name.trim();
+  if(!projectState.demo.places.includes(clean))projectState.demo.places.push(clean);
   saveProjectState();renderDemoData();
-  toast('Luogo aggiunto');
+  const placeSelect=document.getElementById('placeSelect');
+  const whereField=document.getElementById('whereField');
+  if(placeSelect)placeSelect.value=clean;
+  if(whereField)whereField.value=clean;
+  toast('Luogo aggiunto al mockup');
 });
 document.getElementById('findIngredientsBtn').addEventListener('click',e=>{
   if(!previewMode)return;
