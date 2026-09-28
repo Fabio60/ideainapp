@@ -1020,17 +1020,24 @@ function applyRequest(raw){
   if(bindMenuMatch){
     const wanted=bindMenuMatch[1].trim().toLowerCase();
     let navCmp=null, navIndex=-1;
+
+    // Priorità: menu inferiore visibile, poi tabs, poi drawer laterale.
+    const candidates=[];
     for(const screen of Object.keys(projectState.components||{})){
-      const found=(projectState.components[screen]||[]).find(cmp=>{
-        if(!['bottomnav','drawer','tabs'].includes(cmp.type))return false;
-        const idx=(cmp.items||[]).findIndex(x=>String(x).toLowerCase()===wanted);
-        if(idx>=0){navIndex=idx;return true}
-        return false;
-      });
-      if(found){navCmp=found;break}
+      for(const cmp of (projectState.components[screen]||[])){
+        if(!['bottomnav','tabs','drawer'].includes(cmp.type))continue;
+        const idx=(cmp.items||[]).findIndex(x=>String(x).trim().toLowerCase()===wanted);
+        if(idx>=0)candidates.push({cmp,idx,priority:cmp.type==='bottomnav'?0:(cmp.type==='tabs'?1:2)});
+      }
     }
+    candidates.sort((a,b)=>a.priority-b.priority);
+    if(candidates.length){
+      navCmp=candidates[0].cmp;
+      navIndex=candidates[0].idx;
+    }
+
     if(navCmp){
-      let listCmp=(projectState.components[active]||[]).find(x=>x.type==='list');
+      let listCmp=(projectState.components[active]||[]).find(x=>x.type==='list' && (x.label||'').toLowerCase().includes('preferit'));
       if(!listCmp){
         listCmp=componentDefaults('list');
         listCmp.label='Preferiti';
@@ -1038,10 +1045,11 @@ function applyRequest(raw){
         listCmp.text='Preferiti';
         projectState.components[active].push(listCmp);
       }
-      projectState.actions[navCmp.id+':'+navIndex]={type:'show',target:listCmp.id,value:''};
       listCmp.visible=false;
-      saveProjectState();renderBuilder();
-      activated.push('action "'+(navCmp.items[navIndex]||wanted)+'" → apre lista');
+      projectState.actions[navCmp.id+':'+navIndex]={type:'show',target:listCmp.id,value:''};
+      saveProjectState();
+      renderBuilder();
+      activated.push('action "'+(navCmp.items[navIndex]||wanted)+'" → apre lista Preferiti');
     }
   }
 
