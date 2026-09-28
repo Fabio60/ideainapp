@@ -146,6 +146,13 @@ body.resizing{cursor:col-resize;user-select:none}
           <label style="margin:0">Mostra elemento</label>
           <input type="checkbox" id="propVisible" checked>
         </div>
+        <div class="prop wide">
+          <label>Casella di testo</label>
+          <select id="propFieldMode">
+            <option value="editable">Read / Write</option>
+            <option value="readonly">Read only</option>
+          </select>
+        </div>
       </div>
     </section>
 
@@ -185,12 +192,12 @@ body.resizing{cursor:col-resize;user-select:none}
 
         <div class="card selectable" data-edit-key="addProductCard" data-edit-label="Card Aggiungi prodotto" style="background:#007aff;color:#fff">
           <h3 class="selectable" data-edit-key="addProductTitle" data-edit-label="Aggiungi prodotto">Aggiungi prodotto</h3>
-          <div class="field selectable" data-edit-key="productField" data-edit-label="Campo prodotto">Es. latte, pane, detersivo…</div>
+          <input class="field selectable" id="productField" data-edit-key="productField" data-edit-label="Campo prodotto" data-field-control="true" placeholder="Es. latte, pane, detersivo…" style="width:100%;border:0">
           <div class="row">
-            <select class="field selectable" id="whereField" data-edit-key="whereField" data-edit-label="Campo Dove" style="border:0">
+            <select class="field selectable" data-field-control="true" id="whereField" data-edit-key="whereField" data-edit-label="Campo Dove" style="border:0">
               <option value="">Dove</option>
             </select>
-            <div class="field selectable" data-edit-key="whenField" data-edit-label="Campo Quando">Quando</div>
+            <input class="field selectable" id="whenField" data-edit-key="whenField" data-edit-label="Campo Quando" data-field-control="true" placeholder="Quando" style="border:0">
           </div>
           <div class="whiteBtn selectable" id="addShoppingBtn" data-edit-key="addShoppingBtn" data-edit-label="Pulsante Aggiungi alla spesa">Aggiungi alla spesa</div>
         </div>
@@ -224,7 +231,7 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="sub selectable" data-edit-key="placesSubtitle" data-edit-label="Sottotitolo Luoghi">Gestisci supermercati, farmacia e altri posti.</div>
           <div class="card selectable" data-edit-key="placesManageCard" data-edit-label="Card Gestione luoghi">
             <h3 class="selectable" data-edit-key="placesManageTitle" data-edit-label="Gestione luoghi">Gestione luoghi</h3>
-            <input class="field" id="placeNameInput" placeholder="Es. Coop, Farmacia, Mercato…" style="width:100%;border:0">
+            <input class="field selectable" id="placeNameInput" data-edit-key="placeNameInput" data-edit-label="Campo Nome luogo" data-field-control="true" placeholder="Es. Coop, Farmacia, Mercato…" style="width:100%;border:0">
             <div class="addbtn selectable" id="addPlaceBtn" data-edit-key="addPlaceBtn" data-edit-label="Pulsante Aggiungi luogo">Aggiungi luogo</div>
           </div>
           <div class="card selectable" data-edit-key="yourPlacesCard" data-edit-label="Card I tuoi luoghi">
@@ -238,7 +245,7 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="sub selectable" data-edit-key="recipesSubtitle" data-edit-label="Sottotitolo Ricette">Aggiungi ingredienti da testo o foto.</div>
           <div class="card selectable" data-edit-key="recipeCard" data-edit-label="Card Aggiungi da ricetta">
             <h3 class="selectable" data-edit-key="recipeAddTitle" data-edit-label="Aggiungi da ricetta">Aggiungi da ricetta</h3>
-            <div class="field selectable" data-edit-key="recipeField" data-edit-label="Campo Ricetta">Incolla una ricetta o scegli una foto…</div>
+            <textarea class="field selectable" id="recipeField" data-edit-key="recipeField" data-edit-label="Campo Ricetta" data-field-control="true" placeholder="Incolla una ricetta o scegli una foto…" style="width:100%;border:0;resize:none"></textarea>
             <div class="addbtn selectable" id="findIngredientsBtn" data-edit-key="findIngredientsBtn" data-edit-label="Pulsante Trova ingredienti">Trova ingredienti</div><div class="demoList" id="ingredientsList"></div>
           </div>
         </div>
@@ -383,6 +390,7 @@ const propBorderColor=document.getElementById('propBorderColor');
 const propWidth=document.getElementById('propWidth');
 const propMinHeight=document.getElementById('propMinHeight');
 const propVisible=document.getElementById('propVisible');
+const propFieldMode=document.getElementById('propFieldMode');
 
 function rgbToHex(rgb){
   if(!rgb)return '#111111';
@@ -396,7 +404,12 @@ function applySavedElementStyles(){
     const key=el.dataset.editKey;
     const s=projectState.styles[key];
     if(s)Object.assign(el.style,s);
-    if(projectState.texts&&projectState.texts[key]!==undefined)el.textContent=projectState.texts[key];
+    if(projectState.texts&&projectState.texts[key]!==undefined && !['INPUT','TEXTAREA','SELECT'].includes(el.tagName))el.textContent=projectState.texts[key];
+    const mode=projectState.fieldModes&&projectState.fieldModes[key];
+    if(el.dataset.fieldControl==='true'&&mode){
+      const ro=mode==='readonly';
+      if(el.tagName==='SELECT')el.disabled=ro; else el.readOnly=ro;
+    }
   });
 }
 function selectEditable(el){
@@ -421,6 +434,9 @@ function selectEditable(el){
   propWidth.value=Math.round((el.getBoundingClientRect().width/el.parentElement.getBoundingClientRect().width)*100)||100;
   propMinHeight.value=parseInt(cs.minHeight)||0;
   propVisible.checked=cs.display!=='none';
+  const isField=el.dataset.fieldControl==='true';
+  propFieldMode.disabled=!isField;
+  propFieldMode.value=isField && (el.readOnly || el.disabled)?'readonly':'editable';
 }
 function updateSelectedStyle(){
   if(!selectedEditable)return;
@@ -442,12 +458,22 @@ function updateSelectedStyle(){
     display:propVisible.checked?'':'none'
   };
   Object.assign(selectedEditable.style,style);
+  if(selectedEditable.dataset.fieldControl==='true'){
+    const ro=propFieldMode.value==='readonly';
+    if(selectedEditable.tagName==='SELECT'){
+      selectedEditable.disabled=ro;
+    }else{
+      selectedEditable.readOnly=ro;
+    }
+    projectState.fieldModes=projectState.fieldModes||{};
+    projectState.fieldModes[selectedEditable.dataset.editKey]=ro?'readonly':'editable';
+  }
   projectState.styles[selectedEditable.dataset.editKey]=style;
   projectState.texts=projectState.texts||{};
   projectState.texts[selectedEditable.dataset.editKey]=selectedEditable.textContent;
   saveProjectState();
 }
-[propText,propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom,propBackgroundColor,propRadius,propBorderWidth,propBorderColor,propWidth,propMinHeight,propVisible].forEach(x=>x.addEventListener('input',updateSelectedStyle));
+[propText,propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom,propBackgroundColor,propRadius,propBorderWidth,propBorderColor,propWidth,propMinHeight,propVisible,propFieldMode].forEach(x=>x.addEventListener('input',updateSelectedStyle));
 let previewMode=false;
 document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click',e=>{
   if(previewMode)return;
@@ -519,9 +545,11 @@ document.getElementById('showShoppingBtn').addEventListener('click',e=>{
 document.getElementById('addShoppingBtn').addEventListener('click',e=>{
   if(!previewMode)return;
   e.stopPropagation();
-  const name=prompt('Quale prodotto vuoi aggiungere?');
-  if(!name||!name.trim())return;
-  projectState.demo.items.push(name.trim());
+  const field=document.getElementById('productField');
+  const name=(field?.value||'').trim();
+  if(!name){toast('Scrivi prima il prodotto');field?.focus();return}
+  projectState.demo.items.push(name);
+  field.value='';
   saveProjectState();renderDemoData();
   toast('Prodotto aggiunto');
 });
@@ -546,8 +574,9 @@ document.getElementById('placeNameInput').addEventListener('keydown',e=>{
 document.getElementById('findIngredientsBtn').addEventListener('click',e=>{
   if(!previewMode)return;
   e.stopPropagation();
-  const text=prompt('Incolla ingredienti separati da virgola o vai a capo');
-  if(!text||!text.trim())return;
+  const field=document.getElementById('recipeField');
+  const text=(field?.value||'').trim();
+  if(!text){toast('Inserisci prima una ricetta o degli ingredienti');field?.focus();return}
   projectState.demo.ingredients=text.split(/[,\n]+/).map(x=>x.trim()).filter(Boolean);
   saveProjectState();renderDemoData();
   toast('Ingredienti trovati');
