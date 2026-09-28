@@ -384,6 +384,7 @@ function switchPhoneScreen(name){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchPhoneScreen(t.dataset.screen)));
 
 let selectedBuilderId=null;
+let selectedBuilderItemIndex=null;
 function findBuilderComponent(id){
   for(const screen of Object.keys(projectState.components||{})){
     const cmp=(projectState.components[screen]||[]).find(x=>x.id===id);
@@ -464,6 +465,7 @@ function removeBuilderComponent(id){
     if(projectState.components[screen].length!==before){saveProjectState();renderBuilder();addMsg('Elemento rimosso dalla schermata '+screen+'.');break}
   }
   selectedBuilderId=null;
+  selectedBuilderItemIndex=null;
 }
 function renderBuilder(){
   document.querySelectorAll('.builderArea').forEach(area=>{
@@ -504,9 +506,52 @@ function renderBuilder(){
       }else if(cmp.type==='button'){
         const b=document.createElement('div');b.className='addbtn';b.textContent=cmp.text||'Continua';body.appendChild(b);
       }else if(cmp.type==='buttongrid'){
+        cmp.itemStyles=cmp.itemStyles||{};
         const grid=document.createElement('div');grid.className='buttonGrid';
-        (cmp.items||[]).forEach(item=>{
-          const b=document.createElement('div');b.className='squareBtn';b.textContent=item;grid.appendChild(b);
+        (cmp.items||[]).forEach((item,idx)=>{
+          const b=document.createElement('div');
+          b.className='squareBtn';
+          b.textContent=item;
+          b.dataset.buttonIndex=idx;
+          if(cmp.itemStyles[idx])Object.assign(b.style,cmp.itemStyles[idx]);
+          if(cmp.id===selectedBuilderId && selectedBuilderItemIndex===idx){
+            b.style.outline='3px solid #34c759';
+            b.style.outlineOffset='2px';
+          }
+          b.onclick=e=>{
+            e.stopPropagation();
+            if(previewMode){
+              const key=cmp.id+':'+idx;
+              const a=projectState.actions[key]||{};
+              if(a.type==='toast' && a.value)toast(a.value);
+              if(a.type==='navigate' && a.target && projectState.projectMode==='example')switchPhoneScreen(a.target);
+              if(['show','hide','toggle','setText'].includes(a.type) && a.target){
+                const target=document.querySelector('[data-builder-id="'+a.target+'"]');
+                if(target){
+                  if(a.type==='show')target.style.display='';
+                  if(a.type==='hide')target.style.display='none';
+                  if(a.type==='toggle')target.style.display=target.style.display==='none'?'':'none';
+                  if(a.type==='setText'){
+                    const bodyEl=target.querySelector('.builderBody');
+                    if(bodyEl)bodyEl.textContent=a.value||'';
+                  }
+                }
+              }
+              return;
+            }
+            selectedBuilderId=cmp.id;
+            selectedBuilderItemIndex=idx;
+            renderBuilder();
+            const current=document.querySelector('[data-builder-id="'+cmp.id+'"] .squareBtn[data-button-index="'+idx+'"]');
+            populateBuilderProperties(cmp,current);
+            propText.value=cmp.items[idx]||'Pulsante '+(idx+1);
+            const a=projectState.actions[cmp.id+':'+idx]||{};
+            propActionType.value=a.type||'';
+            propActionTarget.value=a.target||'';
+            propActionValue.value=a.value||'';
+            selectedElementName.textContent='Pulsante '+(idx+1);
+          };
+          grid.appendChild(b);
         });
         body.appendChild(grid);
       }else if(cmp.type==='divider'){
@@ -527,6 +572,7 @@ function renderBuilder(){
       wrap.style.display=cmp.visible===false?'none':'';
       wrap.querySelector('.builderRemove').onclick=e=>{e.stopPropagation();removeBuilderComponent(cmp.id)};
       wrap.onclick=e=>{
+        if(e.target.closest('.squareBtn'))return;
         if(previewMode){
           const a=projectState.actions[cmp.id]||{};
           if(a.type==='toast' && a.value) toast(a.value);
@@ -549,6 +595,7 @@ function renderBuilder(){
         }
         e.stopPropagation();
         selectedBuilderId=cmp.id;
+        selectedBuilderItemIndex=null;
         renderBuilder();
         const current=document.querySelector('[data-builder-id="'+cmp.id+'"] .builderBody');
         const visual=current?.firstElementChild||current;
@@ -784,6 +831,7 @@ function applySavedElementStyles(){
 }
 function selectEditable(el){
   selectedBuilderId=null;
+  selectedBuilderItemIndex=null;
   document.querySelectorAll('.selectable.selected').forEach(x=>x.classList.remove('selected'));
   selectedEditable=el;
   el.classList.add('selected');
@@ -830,9 +878,24 @@ function updateSelectedStyle(){
     const found=findBuilderComponent(selectedBuilderId);
     if(!found)return;
     const cmp=found.cmp;
+
+    if(cmp.type==='buttongrid' && selectedBuilderItemIndex!==null){
+      cmp.itemStyles=cmp.itemStyles||{};
+      cmp.itemStyles[selectedBuilderItemIndex]=style;
+      cmp.items[selectedBuilderItemIndex]=propText.value||('Pulsante '+(selectedBuilderItemIndex+1));
+      saveProjectState();
+      renderBuilder();
+      const visual=document.querySelector('[data-builder-id="'+cmp.id+'"] .squareBtn[data-button-index="'+selectedBuilderItemIndex+'"]');
+      if(visual){
+        populateBuilderProperties(cmp,visual);
+        propText.value=cmp.items[selectedBuilderItemIndex];
+        selectedElementName.textContent='Pulsante '+(selectedBuilderItemIndex+1);
+      }
+      return;
+    }
+
     cmp.style=style;
     cmp.visible=propVisible.checked;
-
     if(['input','textarea','date'].includes(cmp.type)) cmp.placeholder=propText.value;
     else if(['select','radio'].includes(cmp.type)) cmp.label=propText.value||cmp.label;
     else cmp.text=propText.value;
@@ -866,7 +929,8 @@ function updateSelectedStyle(){
 [propText,propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom,propBackgroundColor,propRadius,propBorderWidth,propBorderColor,propWidth,propMinHeight,propVisible,propFieldMode].forEach(x=>x.addEventListener('input',updateSelectedStyle));
 function saveSelectedBuilderAction(){
   if(!selectedBuilderId)return;
-  projectState.actions[selectedBuilderId]={
+  const key=selectedBuilderItemIndex!==null ? selectedBuilderId+':'+selectedBuilderItemIndex : selectedBuilderId;
+  projectState.actions[key]={
     type:propActionType.value,
     target:propActionTarget.value.trim(),
     value:propActionValue.value
@@ -884,6 +948,7 @@ document.getElementById('closePropertiesBtn').onclick=()=>{
   if(selectedEditable)selectedEditable.classList.remove('selected');
   selectedEditable=null;
   selectedBuilderId=null;
+  selectedBuilderItemIndex=null;
   propertiesPanel.classList.remove('show');
 };
 applySavedElementStyles();
