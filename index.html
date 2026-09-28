@@ -382,6 +382,47 @@ function switchPhoneScreen(name){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchPhoneScreen(t.dataset.screen)));
 
 let selectedBuilderId=null;
+function findBuilderComponent(id){
+  for(const screen of Object.keys(projectState.components||{})){
+    const cmp=(projectState.components[screen]||[]).find(x=>x.id===id);
+    if(cmp)return {cmp,screen};
+  }
+  return null;
+}
+function populateBuilderProperties(cmp, visual){
+  selectedEditable=null;
+  document.querySelectorAll('.selectable.selected').forEach(x=>x.classList.remove('selected'));
+  propertiesPanel.classList.add('show');
+  selectedElementName.textContent=cmp.label||'Componente';
+
+  const cs=getComputedStyle(visual||document.body);
+  if(cmp.type==='input'||cmp.type==='textarea'||cmp.type==='date') propText.value=cmp.placeholder||cmp.label||'';
+  else if(cmp.type==='select'||cmp.type==='radio') propText.value=cmp.label||'';
+  else propText.value=cmp.text||cmp.label||'';
+
+  propFontSize.value=parseInt(cs.fontSize)||16;
+  const fw=parseInt(cs.fontWeight)||400;
+  propFontWeight.value=[400,600,700,800].reduce((a,b)=>Math.abs(b-fw)<Math.abs(a-fw)?b:a,400);
+  propColor.value=rgbToHex(cs.color);
+  propTextAlign.value=cs.textAlign==='center'?'center':(cs.textAlign==='right'?'right':'left');
+  propMarginTop.value=parseInt(cs.marginTop)||0;
+  propMarginBottom.value=parseInt(cs.marginBottom)||0;
+  propBackgroundColor.value=rgbToHex(cs.backgroundColor==='rgba(0, 0, 0, 0)'?'#ffffff':cs.backgroundColor);
+  propRadius.value=parseInt(cs.borderRadius)||0;
+  propBorderWidth.value=parseInt(cs.borderWidth)||0;
+  propBorderColor.value=rgbToHex(cs.borderColor);
+  propWidth.value=Math.min(100,Math.max(20,Math.round(((visual?.getBoundingClientRect().width||1)/(visual?.parentElement?.getBoundingClientRect().width||1))*100)))||100;
+  propMinHeight.value=parseInt(cs.minHeight)||0;
+  propVisible.checked=(cmp.visible!==false);
+  const isField=['input','textarea','date','select'].includes(cmp.type);
+  propFieldMode.disabled=!isField;
+  propFieldMode.value=cmp.mode==='readonly'?'readonly':'editable';
+
+  const a=projectState.actions[cmp.id]||{};
+  propActionType.value=a.type||'';
+  propActionTarget.value=a.target||'';
+  propActionValue.value=a.value||'';
+}
 function activeScreenName(){
   if(projectState.projectMode==='blank') return 'NuovaIdea';
   const active=document.querySelector('.tab.active');
@@ -460,6 +501,9 @@ function renderBuilder(){
       }else if(cmp.type==='divider'){
         const d=document.createElement('div');d.className='mobileDivider';body.appendChild(d);
       }
+      const visual=body.firstElementChild||body;
+      if(cmp.style)Object.assign(visual.style,cmp.style);
+      wrap.style.display=cmp.visible===false?'none':'';
       wrap.querySelector('.builderRemove').onclick=e=>{e.stopPropagation();removeBuilderComponent(cmp.id)};
       wrap.onclick=e=>{
         if(previewMode){
@@ -484,13 +528,10 @@ function renderBuilder(){
         }
         e.stopPropagation();
         selectedBuilderId=cmp.id;
-        const a=projectState.actions[cmp.id]||{};
-        propActionType.value=a.type||'';
-        propActionTarget.value=a.target||'';
-        propActionValue.value=a.value||'';
-        propertiesPanel.classList.add('show');
-        selectedElementName.textContent=cmp.label||'Componente';
         renderBuilder();
+        const current=document.querySelector('[data-builder-id="'+cmp.id+'"] .builderBody');
+        const visual=current?.firstElementChild||current;
+        populateBuilderProperties(cmp,visual);
       };
       area.appendChild(wrap);
     });
@@ -659,6 +700,7 @@ function applySavedElementStyles(){
   });
 }
 function selectEditable(el){
+  selectedBuilderId=null;
   document.querySelectorAll('.selectable.selected').forEach(x=>x.classList.remove('selected'));
   selectedEditable=el;
   el.classList.add('selected');
@@ -685,8 +727,6 @@ function selectEditable(el){
   propFieldMode.value=isField && (el.readOnly || el.disabled)?'readonly':'editable';
 }
 function updateSelectedStyle(){
-  if(!selectedEditable)return;
-  if(propText.value!==selectedEditable.textContent.trim()) selectedEditable.textContent=propText.value;
   const style={
     fontSize:propFontSize.value+'px',
     fontWeight:propFontWeight.value,
@@ -700,21 +740,42 @@ function updateSelectedStyle(){
     borderStyle:Number(propBorderWidth.value)>0?'solid':'none',
     borderColor:propBorderColor.value,
     width:propWidth.value+'%',
-    minHeight:propMinHeight.value+'px',
-    display:propVisible.checked?'':'none'
+    minHeight:propMinHeight.value+'px'
   };
-  Object.assign(selectedEditable.style,style);
+
+  if(selectedBuilderId && !selectedEditable){
+    const found=findBuilderComponent(selectedBuilderId);
+    if(!found)return;
+    const cmp=found.cmp;
+    cmp.style=style;
+    cmp.visible=propVisible.checked;
+
+    if(['input','textarea','date'].includes(cmp.type)) cmp.placeholder=propText.value;
+    else if(['select','radio'].includes(cmp.type)) cmp.label=propText.value||cmp.label;
+    else cmp.text=propText.value;
+
+    if(['input','textarea','date','select'].includes(cmp.type)){
+      cmp.mode=propFieldMode.value==='readonly'?'readonly':'editable';
+    }
+    saveProjectState();
+    renderBuilder();
+    const body=document.querySelector('[data-builder-id="'+cmp.id+'"] .builderBody');
+    const visual=body?.firstElementChild||body;
+    if(visual)populateBuilderProperties(cmp,visual);
+    return;
+  }
+
+  if(!selectedEditable)return;
+  if(propText.value!==selectedEditable.textContent.trim()) selectedEditable.textContent=propText.value;
+  Object.assign(selectedEditable.style,{...style,display:propVisible.checked?'':'none'});
   if(selectedEditable.dataset.fieldControl==='true'){
     const ro=propFieldMode.value==='readonly';
-    if(selectedEditable.tagName==='SELECT'){
-      selectedEditable.disabled=ro;
-    }else{
-      selectedEditable.readOnly=ro;
-    }
+    if(selectedEditable.tagName==='SELECT') selectedEditable.disabled=ro;
+    else selectedEditable.readOnly=ro;
     projectState.fieldModes=projectState.fieldModes||{};
     projectState.fieldModes[selectedEditable.dataset.editKey]=ro?'readonly':'editable';
   }
-  projectState.styles[selectedEditable.dataset.editKey]=style;
+  projectState.styles[selectedEditable.dataset.editKey]={...style,display:propVisible.checked?'':'none'};
   projectState.texts=projectState.texts||{};
   projectState.texts[selectedEditable.dataset.editKey]=selectedEditable.textContent;
   saveProjectState();
@@ -739,6 +800,7 @@ document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click'
 document.getElementById('closePropertiesBtn').onclick=()=>{
   if(selectedEditable)selectedEditable.classList.remove('selected');
   selectedEditable=null;
+  selectedBuilderId=null;
   propertiesPanel.classList.remove('show');
 };
 applySavedElementStyles();
