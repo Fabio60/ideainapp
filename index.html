@@ -399,13 +399,14 @@ function componentDefaults(type){
   if(type==='divider')return{id,type,label:'Separatore'};
   return{id,type,label:'Elemento'};
 }
-function addBuilderComponent(type,screen=activeScreenName()){
+function addBuilderComponent(type,screen=activeScreenName(),silent=false){
   if(projectState.projectMode==='blank') screen='NuovaIdea';
   const cmp=componentDefaults(type);
   projectState.components[screen]=projectState.components[screen]||[];
   projectState.components[screen].push(cmp);
   saveProjectState();renderBuilder();
-  addMsg('Ho aggiunto '+cmp.label+' nella schermata '+screen+'. Puoi selezionarlo nel mockup e modificarlo.');
+  if(!silent)addMsg('Ho aggiunto '+cmp.label+' nella schermata '+screen+'. Puoi selezionarlo nel mockup e modificarlo.');
+  return cmp;
 }
 function removeBuilderComponent(id){
   for(const screen of Object.keys(projectState.components)){
@@ -524,6 +525,7 @@ function startNewIdea(){
   projectState.components.NuovaIdea=[];
   projectState.decisions=[];
   decisionsList.innerHTML='';
+  document.querySelectorAll('.chat .msg').forEach(m=>m.remove());
   setProjectMode('blank');
   addMsg('Descrivimi la tua nuova idea: quale problema deve risolvere e cosa deve poter fare la prima schermata?');
 }
@@ -538,17 +540,28 @@ function applyRequest(raw){
   const t=raw.toLowerCase();
   const activated=[];
   const active=activeScreenName();
-  const radioMatch=t.match(/(?:aggiungi|crea).*?(\d+)\s*(?:pallini|radio|opzioni)/);
-  if(/(?:aggiungi|crea).*?(?:riquadro|card)/.test(t)){addBuilderComponent('card',active);activated.push('riquadro');
-  }else if(/(?:aggiungi|crea).*?(?:date picker|data|calendario data)/.test(t)){addBuilderComponent('date',active);activated.push('date picker');
-  }else if(/(?:aggiungi|crea).*?(?:switch|slide button|interruttore)/.test(t)){addBuilderComponent('switch',active);activated.push('switch');
-  }else if(/(?:aggiungi|crea).*?(?:checkbox|spunta)/.test(t)){addBuilderComponent('checkbox',active);activated.push('checkbox');
-  }else if(/(?:aggiungi|crea).*?(?:menu|tendina|select)/.test(t)){addBuilderComponent('select',active);activated.push('menu');
-  }else if(/(?:aggiungi|crea).*?(?:separatore|divider)/.test(t)){addBuilderComponent('divider',active);activated.push('separatore');
+  const normalized=t.replace(/aggiugi/g,'aggiungi').replace(/agggiungi/g,'aggiungi');
+  const countMatch=normalized.match(/(?:aggiungi|crea)\s+(\d+)\s+/);
+  const count=countMatch?Math.max(1,Math.min(12,Number(countMatch[1]))):1;
+  const addMany=(type,label,n=count)=>{
+    for(let i=0;i<n;i++)addBuilderComponent(type,active,true);
+    addMsg('Ho aggiunto '+n+' '+label+(n>1?'':'')+' nella schermata '+active+'.');
+    activated.push(n+' '+label);
+  };
+  const radioMatch=normalized.match(/(?:aggiungi|crea).*?(\d+)\s*(?:pallini|radio|opzioni)/);
+
+  if(/(?:aggiungi|crea).*?(?:riquadro|riquadri|card)/.test(normalized)){addMany('card',count===1?'riquadro':'riquadri');
+  }else if(/(?:aggiungi|crea).*?(?:date picker|data picker|date|calendario data)/.test(normalized)){addMany('date',count===1?'date picker':'date picker');
+  }else if(/(?:aggiungi|crea).*?(?:switch|slide button|interruttore)/.test(normalized)){addMany('switch',count===1?'switch':'switch');
+  }else if(/(?:aggiungi|crea).*?(?:checkbox|check|spunta)/.test(normalized)){addMany('checkbox',count===1?'checkbox':'checkbox');
+  }else if(/(?:aggiungi|crea).*?(?:menu|tendina|select)/.test(normalized)){addMany('select',count===1?'menu':'menu');
+  }else if(/(?:aggiungi|crea).*?(?:separatore|separatori|divider)/.test(normalized)){addMany('divider',count===1?'separatore':'separatori');
+  }else if(/(?:aggiungi|crea).*?(?:pulsante|pulsanti|bottone|bottoni)/.test(normalized)){addMany('button',count===1?'pulsante':'pulsanti');
+  }else if(/(?:aggiungi|crea).*?(?:casella di testo|caselle di testo|campo testo|campi testo|input)/.test(normalized)){addMany('input',count===1?'casella di testo':'caselle di testo');
+  }else if(/(?:aggiungi|crea).*?(?:area di testo|aree di testo|textarea)/.test(normalized)){addMany('textarea',count===1?'area di testo':'aree di testo');
+  }else if(/(?:aggiungi|crea).*?(?:testo|testi|titolo|titoli|etichetta|etichette)/.test(normalized)){addMany('text',count===1?'testo':'testi');
   }else if(/(?:aggiungi|crea).*?(?:area di testo|textarea)/.test(t)){
     addBuilderComponent('textarea',active);activated.push('area di testo');
-  }else if(/(?:aggiungi|crea).*?(?:casella di testo|campo testo|input)/.test(t)){
-    addBuilderComponent('input',active);activated.push('casella di testo');
   }else if(radioMatch||/(?:aggiungi|crea).*?(?:pallini|radio)/.test(t)){
     const cmp=componentDefaults('radio');
     const n=radioMatch?Math.max(2,Math.min(8,Number(radioMatch[1]))):3;
@@ -556,10 +569,6 @@ function applyRequest(raw){
     projectState.components[active].push(cmp);saveProjectState();renderBuilder();
     addMsg('Ho aggiunto '+n+' opzioni di selezione nella schermata '+active+'.');
     activated.push('pallini di selezione');
-  }else if(/(?:aggiungi|crea).*?(?:pulsante|bottone)/.test(t)){
-    addBuilderComponent('button',active);activated.push('pulsante');
-  }else if(/(?:aggiungi|crea).*?(?:testo|titolo|etichetta)/.test(t)){
-    addBuilderComponent('text',active);activated.push('testo');
   }
   if(/(?:rimuovi|elimina).*?(?:elemento|questo)/.test(t)&&selectedBuilderId){
     removeBuilderComponent(selectedBuilderId);activated.push('rimozione elemento');
