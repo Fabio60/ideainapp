@@ -565,25 +565,40 @@ function removeBuilderComponent(id){
 function executeBuilderAction(a){
   if(!a)return;
   if(a.type==='toast' && a.value)toast(a.value);
-  if(['show','hide','toggle','setText'].includes(a.type) && a.target){
-    const target=document.querySelector('[data-builder-id="'+a.target+'"]');
-    if(target){
-      if(a.type==='show'){
-        target.style.display='block';
-        requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
-      }
-      if(a.type==='hide')target.style.display='none';
-      if(a.type==='toggle'){
-        const hidden=getComputedStyle(target).display==='none';
-        target.style.display=hidden?'block':'none';
-        if(hidden)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'nearest'}));
-      }
-      if(a.type==='setText'){
-        const bodyEl=target.querySelector('.builderBody');
-        if(bodyEl)bodyEl.textContent=a.value||'';
+
+  if(['show','hide','toggle'].includes(a.type) && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found){
+      if(a.type==='show') found.cmp.visible=true;
+      if(a.type==='hide') found.cmp.visible=false;
+      if(a.type==='toggle') found.cmp.visible=found.cmp.visible===false;
+      saveProjectState();
+      renderBuilder();
+      requestAnimationFrame(()=>{
+        const target=document.querySelector('[data-builder-id="'+a.target+'"]');
+        if(target && found.cmp.visible!==false){
+          target.style.display='block';
+          target.scrollIntoView({behavior:'smooth',block:'nearest'});
+        }
+      });
+    }else{
+      const target=document.querySelector('[data-builder-id="'+a.target+'"]');
+      if(target){
+        if(a.type==='show')target.style.display='block';
+        if(a.type==='hide')target.style.display='none';
+        if(a.type==='toggle')target.style.display=getComputedStyle(target).display==='none'?'block':'none';
       }
     }
   }
+
+  if(a.type==='setText' && a.target){
+    const target=document.querySelector('[data-builder-id="'+a.target+'"]');
+    if(target){
+      const bodyEl=target.querySelector('.builderBody');
+      if(bodyEl)bodyEl.textContent=a.value||'';
+    }
+  }
+
   if(a.type==='navigate' && a.target && projectState.projectMode==='example')switchPhoneScreen(a.target);
   if(a.type==='openDrawer')toggleDrawer();
 }
@@ -1018,7 +1033,7 @@ function applyRequest(raw){
       let listCmp=(projectState.components[active]||[]).find(x=>x.type==='list');
       if(!listCmp){
         listCmp=componentDefaults('list');
-        listCmp.label='Lista Preferiti';
+        listCmp.label='Preferiti';
         listCmp.items=['Preferito 1','Preferito 2','Preferito 3'];
         listCmp.text='Preferiti';
         projectState.components[active].push(listCmp);
