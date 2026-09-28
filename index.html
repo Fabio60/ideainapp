@@ -23,17 +23,20 @@ body.resizing{cursor:col-resize;user-select:none}
 .phone{width:390px;max-width:100%;border:12px solid #111318;border-radius:42px;background:#fff;box-shadow:0 24px 60px #0002;overflow:hidden;margin-left:auto;margin-right:6%}.phoneTop{height:30px;background:#111318;position:relative}.phoneTop:after{content:"";position:absolute;left:50%;top:7px;transform:translateX(-50%);width:90px;height:16px;border-radius:10px;background:#000}
 .phoneBody{padding:18px;background:#f2f2f7;min-height:690px}.appTitle{font-size:32px;font-weight:850;letter-spacing:-1px}.sub{color:#6e6e73;margin-top:3px}.hero{background:#007aff;color:#fff;border-radius:22px;padding:16px;margin-top:18px}.hero h2{margin:0 0 6px;font-size:21px}.select,.field{background:#fff;color:#111;border-radius:14px;padding:13px;margin-top:10px}.whiteBtn{background:#fff;color:#007aff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.card{background:#fff;border-radius:20px;padding:15px;margin-top:14px}.card h3{margin:0 0 10px}.row{display:flex;gap:8px}.row .field{flex:1;background:#f2f2f7}.addbtn{background:#007aff;color:#fff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.tabbar{display:flex;justify-content:space-around;background:#fff;border-top:1px solid #ddd;padding:12px 6px 16px;margin:18px -18px -18px}.tab{text-align:center;font-size:12px;color:#777}.tab b{display:block;font-size:22px;margin-bottom:2px}.tab.active{color:#34c759}
 .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-right:6%}.ctl{border:1px solid #dfe3e8;background:#fff;border-radius:12px;padding:10px 14px;font-weight:700}.ctl.primary{background:#3478f6;color:#fff;border-color:#3478f6}
+.featureCard{display:none}.featureCard.show{display:block}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.modal.hidden{display:none}.modalBox{width:min(420px,100%);background:#fff;border-radius:22px;padding:20px;box-shadow:0 24px 80px #0005}.modalBox h2{margin:0 0 8px}.modalActions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}.modalActions button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:700}.modalActions .primary{background:#3478f6;color:#fff}.modalActions .secondary{background:#eef0f4;color:#111}.qrBox{display:grid;place-items:center;padding:18px 0}.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#111318;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;z-index:120;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}
 @media(max-width:1100px){.workspace{grid-template-columns:var(--sidebar-width,420px) 8px minmax(0,1fr)}.phone{margin-right:2%}.controls{padding-right:2%}}
 @media(max-width:900px){.workspace{grid-template-columns:1fr}.resizeHandle{display:none}.sidebar{min-height:auto}.previewArea{padding-top:16px;align-items:center}.phone{width:360px;margin:0 auto}.controls{justify-content:center;padding-right:0}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <header class="topbar">
   <div class="brand">IdeaInApp</div>
   <div class="project">Progetto: LaTuaSpesa</div>
   <div class="spacer"></div>
-  <button class="topbtn">Condividi</button>
-  <button class="topbtn primary">Pubblica</button>
+  <button class="topbtn" id="topShareBtn">Condividi</button>
+  <button class="topbtn primary" id="publishBtn">Pubblica</button>
 </header>
 
 <main class="workspace">
@@ -56,10 +59,12 @@ body.resizing{cursor:col-resize;user-select:none}
 
       <div class="decisions">
         <h3>Decisioni prese</h3>
-        <div class="decision">✓ Lista condivisa</div>
-        <div class="decision">✓ Più luoghi / negozi</div>
-        <div class="decision">✓ Stessa lista su più dispositivi</div>
-        <div class="decision">○ Storico acquisti da valutare</div>
+        <div id="decisionsList">
+          <div class="decision">✓ Lista condivisa</div>
+          <div class="decision">✓ Più luoghi / negozi</div>
+          <div class="decision">✓ Stessa lista su più dispositivi</div>
+          <div class="decision">○ Storico acquisti da valutare</div>
+        </div>
       </div>
     </section>
 
@@ -106,6 +111,19 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="whiteBtn">Aggiungi alla spesa</div>
         </div>
 
+        <div class="card featureCard" id="historyFeature">
+          <h3>Storico acquisti</h3>
+          <div style="color:#8e8e93;font-size:13px">Consulta gli acquisti già terminati.</div>
+        </div>
+        <div class="card featureCard" id="recipeFeature">
+          <h3>Ricette</h3>
+          <div style="color:#8e8e93;font-size:13px">Aggiungi ingredienti da testo o foto.</div>
+        </div>
+        <div class="card featureCard" id="shareFeature">
+          <h3>Condivisione</h3>
+          <div style="color:#8e8e93;font-size:13px">Condividi l'App con link o QR.</div>
+        </div>
+
         <div class="tabbar">
           <div class="tab active"><b>🛒</b>Spesa</div>
           <div class="tab"><b>🗓️</b>Storico</div>
@@ -116,19 +134,123 @@ body.resizing{cursor:col-resize;user-select:none}
     </div>
 
     <div class="controls">
-      <button class="ctl">Condividi link</button>
-      <button class="ctl">Mostra QR</button>
-      <button class="ctl">Anteprima</button>
-      <button class="ctl primary">Genera la mia App</button>
+      <button class="ctl" id="copyLinkBtn">Condividi link</button>
+      <button class="ctl" id="showQrBtn">Mostra QR</button>
+      <button class="ctl" id="previewBtn">Anteprima</button>
+      <button class="ctl primary" id="generateBtn">Genera la mia App</button>
     </div>
   </section>
 </main>
 
+<div class="modal hidden" id="shareModal">
+  <div class="modalBox">
+    <h2 id="modalTitle">Condividi IdeaInApp</h2>
+    <div style="color:#6e6e73;font-size:14px" id="modalText">Condividi questa anteprima tramite link o QR.</div>
+    <div class="qrBox" id="qrBox"></div>
+    <div class="modalActions">
+      <button class="secondary" id="closeModalBtn">Chiudi</button>
+      <button class="primary" id="copyModalLinkBtn">Copia link</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <script>
 const input=document.getElementById('chatInput');
 const send=document.getElementById('sendBtn');
-send.onclick=()=>{if(!input.value.trim())return;alert('Demo iniziale: la chat IA verrà collegata nel prossimo step.');input.value=''};
+const chat=document.querySelector('.chat');
+const decisionsList=document.getElementById('decisionsList');
+const toastEl=document.getElementById('toast');
+const featureState={history:false,recipes:false,share:false};
+
+function toast(msg){
+  toastEl.textContent=msg;
+  toastEl.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1600);
+}
+function addMsg(text,who='ai'){
+  const d=document.createElement('div');
+  d.className='msg '+who;
+  d.textContent=text;
+  const decisions=document.querySelector('.decisions');
+  chat.insertBefore(d,decisions);
+  chat.scrollTop=chat.scrollHeight;
+}
+function addDecision(text){
+  const existing=[...decisionsList.querySelectorAll('.decision')].some(x=>x.textContent.includes(text));
+  if(existing)return;
+  const d=document.createElement('div');
+  d.className='decision';
+  d.textContent='✓ '+text;
+  decisionsList.appendChild(d);
+}
+function applyRequest(raw){
+  const t=raw.toLowerCase();
+  const activated=[];
+  if(/storico|cronologia/.test(t)){
+    featureState.history=true;
+    document.getElementById('historyFeature').classList.add('show');
+    addDecision('Storico acquisti');
+    activated.push('storico acquisti');
+  }
+  if(/ricett|ingredien|foto/.test(t)){
+    featureState.recipes=true;
+    document.getElementById('recipeFeature').classList.add('show');
+    addDecision('Ricette e ingredienti');
+    activated.push('ricette');
+  }
+  if(/condiv|qr|link/.test(t)){
+    featureState.share=true;
+    document.getElementById('shareFeature').classList.add('show');
+    addDecision('Condivisione con link e QR');
+    activated.push('condivisione');
+  }
+  if(/luogh|negoz|supermerc/.test(t)){
+    addDecision('Gestione luoghi / negozi');
+    activated.push('luoghi');
+  }
+  if(activated.length){
+    addMsg('Ho aggiunto '+activated.join(', ')+'. Guarda l’anteprima a destra: il progetto si aggiorna mentre definiamo l’idea.');
+  }else{
+    addMsg('Ho registrato la richiesta. In questa prima demo riconosco già storico, ricette, luoghi e condivisione. Il collegamento alla IA completa sarà il prossimo passo.');
+  }
+}
+send.onclick=()=>{
+  const v=input.value.trim();
+  if(!v)return;
+  addMsg(v,'user');
+  input.value='';
+  setTimeout(()=>applyRequest(v),180);
+};
 input.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});
+
+const shareModal=document.getElementById('shareModal');
+const qrBox=document.getElementById('qrBox');
+function shareUrl(){return location.origin+location.pathname}
+function openShare(title='Condividi IdeaInApp'){
+  document.getElementById('modalTitle').textContent=title;
+  qrBox.innerHTML='';
+  new QRCode(qrBox,{text:shareUrl(),width:190,height:190,correctLevel:QRCode.CorrectLevel.M});
+  shareModal.classList.remove('hidden');
+}
+async function copyLink(){
+  try{await navigator.clipboard.writeText(shareUrl());toast('Link copiato')}catch{toast('Copia il link dalla barra del browser')}
+}
+document.getElementById('topShareBtn').onclick=()=>openShare();
+document.getElementById('showQrBtn').onclick=()=>openShare('QR della tua anteprima');
+document.getElementById('copyLinkBtn').onclick=copyLink;
+document.getElementById('copyModalLinkBtn').onclick=copyLink;
+document.getElementById('closeModalBtn').onclick=()=>shareModal.classList.add('hidden');
+shareModal.addEventListener('click',e=>{if(e.target===shareModal)shareModal.classList.add('hidden')});
+document.getElementById('previewBtn').onclick=()=>document.querySelector('.phone').scrollIntoView({behavior:'smooth',block:'center'});
+function generated(){
+  addDecision('App pronta per la pubblicazione');
+  openShare('La tua App è pronta');
+  document.getElementById('modalText').textContent='Questa è ancora una demo: il prossimo passo collegherà salvataggio, IA e pubblicazione reale.';
+}
+document.getElementById('generateBtn').onclick=generated;
+document.getElementById('publishBtn').onclick=generated;
 
 const workspace=document.querySelector('.workspace');
 const handle=document.getElementById('resizeHandle');
