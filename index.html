@@ -10,8 +10,11 @@
 .topbar{height:68px;background:#111318;color:#fff;display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:20}
 .brand{font-size:24px;font-weight:800;letter-spacing:-.5px}.project{color:#c9ccd4;font-size:14px}
 .spacer{flex:1}.topbtn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;background:#2a2d35;color:#fff}.topbtn.primary{background:#3478f6}
-.workspace{display:grid;grid-template-columns:470px 1fr;min-height:calc(100vh - 68px)}
-.sidebar{background:#17191f;color:#fff;border-right:1px solid #2a2d35;display:flex;flex-direction:column;min-height:calc(100vh - 68px)}
+.workspace{display:grid;grid-template-columns:var(--sidebar-width,470px) 8px minmax(0,1fr);min-height:calc(100vh - 68px)}
+.sidebar{background:#17191f;color:#fff;display:flex;flex-direction:column;min-height:calc(100vh - 68px)}
+.resizeHandle{cursor:col-resize;background:linear-gradient(90deg,#17191f 0,#2f343d 50%,#f4f5f7 50%,#f4f5f7 100%);position:relative}
+.resizeHandle:after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:46px;border-radius:3px;background:#9aa0ad66}
+body.resizing{cursor:col-resize;user-select:none}
 .ideaSteps{padding:18px;border-bottom:1px solid #2a2d35}.steps{display:flex;gap:8px;margin-top:10px}.step{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#2a2d35;color:#9aa0ad;font-weight:800}.step.active{background:#3478f6;color:#fff}.step.done{background:#34c759;color:#fff}
 .chat{padding:18px;flex:1;overflow:auto}.msg{max-width:92%;padding:12px 14px;border-radius:16px;margin:10px 0;line-height:1.4;font-size:14px}.ai{background:#252832;color:#fff}.user{background:#3478f6;color:#fff;margin-left:auto}.decisions{margin-top:18px;background:#20232b;border-radius:16px;padding:14px}.decisions h3{margin:0 0 10px;font-size:15px}.decision{font-size:13px;color:#c9ccd4;margin:7px 0}
 .inputbar{padding:14px;border-top:1px solid #2a2d35;display:flex;gap:8px}.inputbar input{flex:1;border:0;border-radius:14px;padding:12px;background:#252832;color:#fff}.send{width:44px;border:0;border-radius:14px;background:#3478f6;color:#fff;font-size:18px}
@@ -20,8 +23,8 @@
 .phone{width:390px;max-width:100%;border:12px solid #111318;border-radius:42px;background:#fff;box-shadow:0 24px 60px #0002;overflow:hidden;margin-left:auto;margin-right:6%}.phoneTop{height:30px;background:#111318;position:relative}.phoneTop:after{content:"";position:absolute;left:50%;top:7px;transform:translateX(-50%);width:90px;height:16px;border-radius:10px;background:#000}
 .phoneBody{padding:18px;background:#f2f2f7;min-height:690px}.appTitle{font-size:32px;font-weight:850;letter-spacing:-1px}.sub{color:#6e6e73;margin-top:3px}.hero{background:#007aff;color:#fff;border-radius:22px;padding:16px;margin-top:18px}.hero h2{margin:0 0 6px;font-size:21px}.select,.field{background:#fff;color:#111;border-radius:14px;padding:13px;margin-top:10px}.whiteBtn{background:#fff;color:#007aff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.card{background:#fff;border-radius:20px;padding:15px;margin-top:14px}.card h3{margin:0 0 10px}.row{display:flex;gap:8px}.row .field{flex:1;background:#f2f2f7}.addbtn{background:#007aff;color:#fff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.tabbar{display:flex;justify-content:space-around;background:#fff;border-top:1px solid #ddd;padding:12px 6px 16px;margin:18px -18px -18px}.tab{text-align:center;font-size:12px;color:#777}.tab b{display:block;font-size:22px;margin-bottom:2px}.tab.active{color:#34c759}
 .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-right:6%}.ctl{border:1px solid #dfe3e8;background:#fff;border-radius:12px;padding:10px 14px;font-weight:700}.ctl.primary{background:#3478f6;color:#fff;border-color:#3478f6}
-@media(max-width:1100px){.workspace{grid-template-columns:420px 1fr}.phone{margin-right:2%}.controls{padding-right:2%}}
-@media(max-width:900px){.workspace{grid-template-columns:1fr}.sidebar{min-height:auto}.previewArea{padding-top:16px;align-items:center}.phone{width:360px;margin:0 auto}.controls{justify-content:center;padding-right:0}}
+@media(max-width:1100px){.workspace{grid-template-columns:var(--sidebar-width,420px) 8px minmax(0,1fr)}.phone{margin-right:2%}.controls{padding-right:2%}}
+@media(max-width:900px){.workspace{grid-template-columns:1fr}.resizeHandle{display:none}.sidebar{min-height:auto}.previewArea{padding-top:16px;align-items:center}.phone{width:360px;margin:0 auto}.controls{justify-content:center;padding-right:0}}
 </style>
 </head>
 <body>
@@ -65,6 +68,7 @@
       <button class="send" id="sendBtn">↑</button>
     </div>
   </aside>
+  <div class="resizeHandle" id="resizeHandle" title="Trascina per ridimensionare le due aree"></div>
 
   <section class="previewArea">
     <div class="previewTop">
@@ -125,6 +129,32 @@ const input=document.getElementById('chatInput');
 const send=document.getElementById('sendBtn');
 send.onclick=()=>{if(!input.value.trim())return;alert('Demo iniziale: la chat IA verrà collegata nel prossimo step.');input.value=''};
 input.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});
+
+const workspace=document.querySelector('.workspace');
+const handle=document.getElementById('resizeHandle');
+const savedWidth=Number(localStorage.getItem('ideainapp_sidebar_width'));
+if(savedWidth>=320&&savedWidth<=760)workspace.style.setProperty('--sidebar-width',savedWidth+'px');
+
+let resizing=false;
+function setSidebarWidth(clientX){
+  if(window.innerWidth<=900)return;
+  const min=320;
+  const max=Math.min(760,window.innerWidth-520);
+  const width=Math.max(min,Math.min(max,clientX));
+  workspace.style.setProperty('--sidebar-width',width+'px');
+  localStorage.setItem('ideainapp_sidebar_width',String(Math.round(width)));
+}
+handle.addEventListener('pointerdown',e=>{
+  resizing=true;
+  document.body.classList.add('resizing');
+  handle.setPointerCapture?.(e.pointerId);
+});
+window.addEventListener('pointermove',e=>{if(resizing)setSidebarWidth(e.clientX)});
+window.addEventListener('pointerup',()=>{resizing=false;document.body.classList.remove('resizing')});
+handle.addEventListener('dblclick',()=>{
+  workspace.style.setProperty('--sidebar-width','470px');
+  localStorage.setItem('ideainapp_sidebar_width','470');
+});
 </script>
 </body>
 </html>
