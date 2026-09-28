@@ -545,6 +545,8 @@ function renderBuilder(){
             const current=document.querySelector('[data-builder-id="'+cmp.id+'"] .squareBtn[data-button-index="'+idx+'"]');
             populateBuilderProperties(cmp,current);
             propText.value=cmp.items[idx]||'Pulsante '+(idx+1);
+            propWidth.value=100;
+            propMinHeight.value=96;
             const a=projectState.actions[cmp.id+':'+idx]||{};
             propActionType.value=a.type||'';
             propActionTarget.value=a.target||'';
@@ -881,7 +883,24 @@ function updateSelectedStyle(){
 
     if(cmp.type==='buttongrid' && selectedBuilderItemIndex!==null){
       cmp.itemStyles=cmp.itemStyles||{};
-      cmp.itemStyles[selectedBuilderItemIndex]=style;
+      const prev=cmp.itemStyles[selectedBuilderItemIndex]||{};
+      const btnStyle={
+        fontSize:style.fontSize,
+        fontWeight:style.fontWeight,
+        color:style.color,
+        textAlign:style.textAlign,
+        marginTop:style.marginTop,
+        marginBottom:style.marginBottom,
+        backgroundColor:style.backgroundColor,
+        borderRadius:style.borderRadius,
+        borderWidth:style.borderWidth,
+        borderStyle:style.borderStyle,
+        borderColor:style.borderColor,
+        width:prev.width||'96px',
+        height:prev.height||'96px',
+        minHeight:prev.minHeight||'96px'
+      };
+      cmp.itemStyles[selectedBuilderItemIndex]=btnStyle;
       cmp.items[selectedBuilderItemIndex]=propText.value||('Pulsante '+(selectedBuilderItemIndex+1));
       saveProjectState();
       renderBuilder();
