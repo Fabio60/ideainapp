@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IdeaInApp</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:#f4f5f7;color:#111}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#f8fafc,#eef1f5)}
+.topbar{height:68px;background:#111318;color:#fff;display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:20}
+.brand{font-size:24px;font-weight:800;letter-spacing:-.5px}.project{color:#c9ccd4;font-size:14px}
+.spacer{flex:1}.topbtn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;background:#2a2d35;color:#fff}.topbtn.primary{background:#3478f6}
+.workspace{display:grid;grid-template-columns:360px 1fr;min-height:calc(100vh - 68px)}
+.sidebar{background:#17191f;color:#fff;border-right:1px solid #2a2d35;display:flex;flex-direction:column;min-height:calc(100vh - 68px)}
+.ideaSteps{padding:18px;border-bottom:1px solid #2a2d35}.steps{display:flex;gap:8px;margin-top:10px}.step{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#2a2d35;color:#9aa0ad;font-weight:800}.step.active{background:#3478f6;color:#fff}.step.done{background:#34c759;color:#fff}
+.chat{padding:18px;flex:1;overflow:auto}.msg{max-width:92%;padding:12px 14px;border-radius:16px;margin:10px 0;line-height:1.4;font-size:14px}.ai{background:#252832;color:#fff}.user{background:#3478f6;color:#fff;margin-left:auto}.decisions{margin-top:18px;background:#20232b;border-radius:16px;padding:14px}.decisions h3{margin:0 0 10px;font-size:15px}.decision{font-size:13px;color:#c9ccd4;margin:7px 0}
+.inputbar{padding:14px;border-top:1px solid #2a2d35;display:flex;gap:8px}.inputbar input{flex:1;border:0;border-radius:14px;padding:12px;background:#252832;color:#fff}.send{width:44px;border:0;border-radius:14px;background:#3478f6;color:#fff;font-size:18px}
+.previewArea{padding:22px;display:flex;flex-direction:column;align-items:center;gap:18px;overflow:auto}
+.previewTop{width:100%;display:flex;align-items:center;gap:12px}.previewTitle{font-size:18px;font-weight:800}.chip{font-size:12px;background:#fff;border:1px solid #dfe3e8;border-radius:999px;padding:7px 10px;color:#666}
+.phone{width:390px;max-width:100%;border:12px solid #111318;border-radius:42px;background:#fff;box-shadow:0 24px 60px #0002;overflow:hidden}.phoneTop{height:30px;background:#111318;position:relative}.phoneTop:after{content:"";position:absolute;left:50%;top:7px;transform:translateX(-50%);width:90px;height:16px;border-radius:10px;background:#000}
+.phoneBody{padding:18px;background:#f2f2f7;min-height:690px}.appTitle{font-size:32px;font-weight:850;letter-spacing:-1px}.sub{color:#6e6e73;margin-top:3px}.hero{background:#007aff;color:#fff;border-radius:22px;padding:16px;margin-top:18px}.hero h2{margin:0 0 6px;font-size:21px}.select,.field{background:#fff;color:#111;border-radius:14px;padding:13px;margin-top:10px}.whiteBtn{background:#fff;color:#007aff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.card{background:#fff;border-radius:20px;padding:15px;margin-top:14px}.card h3{margin:0 0 10px}.row{display:flex;gap:8px}.row .field{flex:1;background:#f2f2f7}.addbtn{background:#007aff;color:#fff;border-radius:14px;padding:13px;text-align:center;font-weight:800;margin-top:10px}.tabbar{display:flex;justify-content:space-around;background:#fff;border-top:1px solid #ddd;padding:12px 6px 16px;margin:18px -18px -18px}.tab{text-align:center;font-size:12px;color:#777}.tab b{display:block;font-size:22px;margin-bottom:2px}.tab.active{color:#34c759}
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}.ctl{border:1px solid #dfe3e8;background:#fff;border-radius:12px;padding:10px 14px;font-weight:700}.ctl.primary{background:#3478f6;color:#fff;border-color:#3478f6}
+@media(max-width:900px){.workspace{grid-template-columns:1fr}.sidebar{min-height:auto}.previewArea{padding-top:16px}.phone{width:360px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">IdeaInApp</div>
+  <div class="project">Progetto: LaTuaSpesa</div>
+  <div class="spacer"></div>
+  <button class="topbtn">Condividi</button>
+  <button class="topbtn primary">Pubblica</button>
+</header>
+
+<main class="workspace">
+  <aside class="sidebar">
+    <section class="ideaSteps">
+      <div style="font-weight:800">Metodo I.D.E.A.</div>
+      <div class="steps">
+        <div class="step done">I</div>
+        <div class="step active">D</div>
+        <div class="step">E</div>
+        <div class="step">A</div>
+      </div>
+    </section>
+
+    <section class="chat">
+      <div class="msg ai">Raccontami quale problema vuoi risolvere. Non serve conoscere termini tecnici.</div>
+      <div class="msg user">Vorrei una lista della spesa che possa usare anche mia moglie.</div>
+      <div class="msg ai">Quindi la condivisione è importante. Vuoi che entrambi vediate la stessa lista in tempo reale?</div>
+      <div class="msg user">Sì, e vorrei dividere i prodotti per negozio.</div>
+
+      <div class="decisions">
+        <h3>Decisioni prese</h3>
+        <div class="decision">✓ Lista condivisa</div>
+        <div class="decision">✓ Più luoghi / negozi</div>
+        <div class="decision">✓ Stessa lista su più dispositivi</div>
+        <div class="decision">○ Storico acquisti da valutare</div>
+      </div>
+    </section>
+
+    <div class="inputbar">
+      <input id="chatInput" placeholder="Scrivi la tua idea o una modifica…">
+      <button class="send" id="sendBtn">↑</button>
+    </div>
+  </aside>
+
+  <section class="previewArea">
+    <div class="previewTop">
+      <div class="previewTitle">Anteprima della tua App</div>
+      <div class="chip">Aggiornamento live</div>
+      <div class="spacer"></div>
+      <div class="chip">iPhone</div>
+    </div>
+
+    <div class="phone">
+      <div class="phoneTop"></div>
+      <div class="phoneBody">
+        <div class="appTitle">LaTuaSpesa</div>
+        <div class="sub">Ricorda cosa comprare, dove e quando.</div>
+
+        <div class="hero">
+          <h2>Dove sto andando?</h2>
+          <div style="font-size:13px;opacity:.88">Scegli un luogo e vedrai solo ciò che devi comprare lì.</div>
+          <div class="select">Tutti i luoghi ▾</div>
+          <div class="whiteBtn">Mostra cosa comprare</div>
+        </div>
+
+        <div class="card">
+          <h3>Acquisti frequenti</h3>
+          <div style="color:#8e8e93;font-size:13px">I prodotti acquistati spesso compariranno qui.</div>
+        </div>
+
+        <div class="card" style="background:#007aff;color:#fff">
+          <h3>Aggiungi prodotto</h3>
+          <div class="field">Es. latte, pane, detersivo…</div>
+          <div class="row">
+            <div class="field">Dove ▾</div>
+            <div class="field">Quando</div>
+          </div>
+          <div class="whiteBtn">Aggiungi alla spesa</div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab active"><b>🛒</b>Spesa</div>
+          <div class="tab"><b>🗓️</b>Storico</div>
+          <div class="tab"><b>📍</b>Luoghi</div>
+          <div class="tab"><b>🍴</b>Ricette</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctl">Condividi link</button>
+      <button class="ctl">Mostra QR</button>
+      <button class="ctl">Anteprima</button>
+      <button class="ctl primary">Genera la mia App</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const input=document.getElementById('chatInput');
+const send=document.getElementById('sendBtn');
+send.onclick=()=>{if(!input.value.trim())return;alert('Demo iniziale: la chat IA verrà collegata nel prossimo step.');input.value=''};
+input.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});
+</script>
+</body>
+</html>
