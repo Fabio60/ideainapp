@@ -17,7 +17,7 @@
 body.resizing{cursor:col-resize;user-select:none}
 .ideaSteps{padding:18px;border-bottom:1px solid #2a2d35}.steps{display:flex;gap:8px;margin-top:10px}.step{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#2a2d35;color:#9aa0ad;font-weight:800}.step.active{background:#3478f6;color:#fff}.step.done{background:#34c759;color:#fff}
 .chat{padding:18px;flex:1;overflow:auto}.msg{max-width:92%;padding:12px 14px;border-radius:16px;margin:10px 0;line-height:1.4;font-size:14px}.ai{background:#252832;color:#fff}.user{background:#3478f6;color:#fff;margin-left:auto}.decisions{margin-top:18px;background:#20232b;border-radius:16px;padding:14px}.decisions h3{margin:0 0 10px;font-size:15px}.decision{font-size:13px;color:#c9ccd4;margin:7px 0}
-.properties{display:none;border-top:1px solid #2a2d35;background:#1d2027;padding:14px}.properties.show{display:block}.propertiesHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}.propertiesHead strong{font-size:14px}.propertiesHead .spacer{flex:1}.propClose{border:0;background:#2a2d35;color:#fff;border-radius:9px;width:28px;height:28px;cursor:pointer}.propGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.prop{background:#252832;border-radius:12px;padding:9px}.prop label{display:block;font-size:11px;color:#aeb4c0;margin-bottom:6px}.prop input[type=number],.prop select{width:100%;border:0;border-radius:8px;background:#17191f;color:#fff;padding:8px}.prop input[type=color]{width:100%;height:34px;border:0;background:transparent;padding:0}.selectable{cursor:pointer;outline:2px solid transparent;outline-offset:3px;border-radius:6px}.selectable:hover{outline-color:#3478f688}.selectable.selected{outline-color:#34c759;box-shadow:0 0 0 4px #34c75922}
+.properties{display:none;border-top:1px solid #2a2d35;background:#1d2027;padding:14px}.properties.show{display:block}.propertiesHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}.propertiesHead strong{font-size:14px}.propertiesHead .spacer{flex:1}.propClose{border:0;background:#2a2d35;color:#fff;border-radius:9px;width:28px;height:28px;cursor:pointer}.propGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.prop{background:#252832;border-radius:12px;padding:9px}.prop.wide{grid-column:1/-1}.prop label{display:block;font-size:11px;color:#aeb4c0;margin-bottom:6px}.prop input[type=number],.prop input[type=text],.prop select{width:100%;border:0;border-radius:8px;background:#17191f;color:#fff;padding:8px}.prop input[type=color]{width:100%;height:34px;border:0;background:transparent;padding:0}.propToggle{display:flex;align-items:center;justify-content:space-between;gap:8px}.propToggle input{transform:scale(1.15)}.selectable{cursor:pointer;outline:2px solid transparent;outline-offset:3px;border-radius:6px}.selectable:hover{outline-color:#3478f688}.selectable.selected{outline-color:#34c759;box-shadow:0 0 0 4px #34c75922}
 .inputbar{padding:14px;border-top:1px solid #2a2d35;display:flex;gap:8px}.inputbar input{flex:1;border:0;border-radius:14px;padding:12px;background:#252832;color:#fff}.send{width:44px;border:0;border-radius:14px;background:#3478f6;color:#fff;font-size:18px}
 .previewArea{padding:22px 34px 22px 28px;display:flex;flex-direction:column;align-items:stretch;gap:18px;overflow:auto}
 .previewTop{width:100%;display:flex;align-items:center;gap:12px}.previewTitle{font-size:18px;font-weight:800}.chip{font-size:12px;background:#fff;border:1px solid #dfe3e8;border-radius:999px;padding:7px 10px;color:#666}
@@ -81,6 +81,10 @@ body.resizing{cursor:col-resize;user-select:none}
         <button class="propClose" id="closePropertiesBtn">×</button>
       </div>
       <div class="propGrid">
+        <div class="prop wide">
+          <label>Testo</label>
+          <input type="text" id="propText">
+        </div>
         <div class="prop">
           <label>Dimensione testo</label>
           <input type="number" id="propFontSize" min="8" max="64" step="1">
@@ -114,6 +118,34 @@ body.resizing{cursor:col-resize;user-select:none}
           <label>Spazio sotto</label>
           <input type="number" id="propMarginBottom" min="0" max="80" step="1">
         </div>
+        <div class="prop">
+          <label>Sfondo</label>
+          <input type="color" id="propBackgroundColor">
+        </div>
+        <div class="prop">
+          <label>Arrotondamento</label>
+          <input type="number" id="propRadius" min="0" max="60" step="1">
+        </div>
+        <div class="prop">
+          <label>Bordo</label>
+          <input type="number" id="propBorderWidth" min="0" max="8" step="1">
+        </div>
+        <div class="prop">
+          <label>Colore bordo</label>
+          <input type="color" id="propBorderColor">
+        </div>
+        <div class="prop">
+          <label>Larghezza %</label>
+          <input type="number" id="propWidth" min="20" max="100" step="1">
+        </div>
+        <div class="prop">
+          <label>Altezza minima</label>
+          <input type="number" id="propMinHeight" min="0" max="300" step="1">
+        </div>
+        <div class="prop wide propToggle">
+          <label style="margin:0">Mostra elemento</label>
+          <input type="checkbox" id="propVisible" checked>
+        </div>
       </div>
     </section>
 
@@ -139,26 +171,26 @@ body.resizing{cursor:col-resize;user-select:none}
         <div class="appTitle selectable" data-edit-key="spesaTitle" data-edit-label="Titolo LaTuaSpesa">LaTuaSpesa</div>
         <div class="sub selectable" data-edit-key="spesaSubtitle" data-edit-label="Sottotitolo Spesa">Ricorda cosa comprare, dove e quando.</div>
 
-        <div class="hero">
+        <div class="hero selectable" data-edit-key="whereCard" data-edit-label="Card Dove sto andando">
           <h2 class="selectable" data-edit-key="whereTitle" data-edit-label="Dove sto andando">Dove sto andando?</h2>
           <div style="font-size:13px;opacity:.88">Scegli un luogo e vedrai solo ciò che devi comprare lì.</div>
-          <div class="select">Tutti i luoghi ▾</div>
-          <div class="whiteBtn">Mostra cosa comprare</div>
+          <div class="select selectable" data-edit-key="placeSelect" data-edit-label="Selettore luogo">Tutti i luoghi ▾</div>
+          <div class="whiteBtn selectable" data-edit-key="showShoppingBtn" data-edit-label="Pulsante Mostra cosa comprare">Mostra cosa comprare</div>
         </div>
 
-        <div class="card">
+        <div class="card selectable" data-edit-key="frequentCard" data-edit-label="Card Acquisti frequenti">
           <h3 class="selectable" data-edit-key="frequentTitle" data-edit-label="Acquisti frequenti">Acquisti frequenti</h3>
           <div style="color:#8e8e93;font-size:13px">I prodotti acquistati spesso compariranno qui.</div>
         </div>
 
-        <div class="card" style="background:#007aff;color:#fff">
+        <div class="card selectable" data-edit-key="addProductCard" data-edit-label="Card Aggiungi prodotto" style="background:#007aff;color:#fff">
           <h3 class="selectable" data-edit-key="addProductTitle" data-edit-label="Aggiungi prodotto">Aggiungi prodotto</h3>
-          <div class="field">Es. latte, pane, detersivo…</div>
+          <div class="field selectable" data-edit-key="productField" data-edit-label="Campo prodotto">Es. latte, pane, detersivo…</div>
           <div class="row">
-            <div class="field">Dove ▾</div>
-            <div class="field">Quando</div>
+            <div class="field selectable" data-edit-key="whereField" data-edit-label="Campo Dove">Dove ▾</div>
+            <div class="field selectable" data-edit-key="whenField" data-edit-label="Campo Quando">Quando</div>
           </div>
-          <div class="whiteBtn">Aggiungi alla spesa</div>
+          <div class="whiteBtn selectable" data-edit-key="addShoppingBtn" data-edit-label="Pulsante Aggiungi alla spesa">Aggiungi alla spesa</div>
         </div>
 
         </div>
@@ -166,7 +198,7 @@ body.resizing{cursor:col-resize;user-select:none}
         <div class="appScreen" id="screenStorico">
           <div class="appTitle selectable" data-edit-key="historyTitle" data-edit-label="Titolo Storico">Storico</div>
           <div class="sub selectable" data-edit-key="historySubtitle" data-edit-label="Sottotitolo Storico">Rivedi le spese concluse per data.</div>
-          <div class="card">
+          <div class="card selectable" data-edit-key="calendarCard" data-edit-label="Card Calendario">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
               <button class="ctl" id="prevMonthBtn" style="padding:6px 10px">‹</button>
               <h3 id="calendarTitle" class="selectable" data-edit-key="calendarTitle" data-edit-label="Mese e anno calendario" style="margin:0">Settembre 2026</h3>
@@ -174,7 +206,7 @@ body.resizing{cursor:col-resize;user-select:none}
             </div>
             <div id="calendarGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px;font-size:11px;text-align:center"></div>
           </div>
-          <div class="card">
+          <div class="card selectable" data-edit-key="historyDayCard" data-edit-label="Card Acquisti del giorno">
             <h3 id="historySelectionTitle" class="selectable" data-edit-key="historySelectionTitle" data-edit-label="Titolo acquisti del giorno">Acquisti del 27 set 2026</h3>
             <div style="color:#8e8e93;font-size:13px">Lo storico apparirà qui quando la funzione sarà attiva.</div>
           </div>
@@ -183,12 +215,12 @@ body.resizing{cursor:col-resize;user-select:none}
         <div class="appScreen" id="screenLuoghi">
           <div class="appTitle selectable" data-edit-key="placesTitle" data-edit-label="Titolo Luoghi">Luoghi</div>
           <div class="sub selectable" data-edit-key="placesSubtitle" data-edit-label="Sottotitolo Luoghi">Gestisci supermercati, farmacia e altri posti.</div>
-          <div class="card">
+          <div class="card selectable" data-edit-key="placesManageCard" data-edit-label="Card Gestione luoghi">
             <h3 class="selectable" data-edit-key="placesManageTitle" data-edit-label="Gestione luoghi">Gestione luoghi</h3>
             <div class="field">Es. Coop, Farmacia, Mercato…</div>
-            <div class="addbtn">Aggiungi luogo</div>
+            <div class="addbtn selectable" data-edit-key="addPlaceBtn" data-edit-label="Pulsante Aggiungi luogo">Aggiungi luogo</div>
           </div>
-          <div class="card">
+          <div class="card selectable" data-edit-key="yourPlacesCard" data-edit-label="Card I tuoi luoghi">
             <h3 class="selectable" data-edit-key="yourPlacesTitle" data-edit-label="I tuoi luoghi">I tuoi luoghi</h3>
             <div style="color:#8e8e93;font-size:13px">I luoghi aggiunti compariranno qui.</div>
           </div>
@@ -197,10 +229,10 @@ body.resizing{cursor:col-resize;user-select:none}
         <div class="appScreen" id="screenRicette">
           <div class="appTitle selectable" data-edit-key="recipesTitle" data-edit-label="Titolo Ricette">Ricette</div>
           <div class="sub selectable" data-edit-key="recipesSubtitle" data-edit-label="Sottotitolo Ricette">Aggiungi ingredienti da testo o foto.</div>
-          <div class="card">
+          <div class="card selectable" data-edit-key="recipeCard" data-edit-label="Card Aggiungi da ricetta">
             <h3 class="selectable" data-edit-key="recipeAddTitle" data-edit-label="Aggiungi da ricetta">Aggiungi da ricetta</h3>
-            <div class="field">Incolla una ricetta o scegli una foto…</div>
-            <div class="addbtn">Trova ingredienti</div>
+            <div class="field selectable" data-edit-key="recipeField" data-edit-label="Campo Ricetta">Incolla una ricetta o scegli una foto…</div>
+            <div class="addbtn selectable" data-edit-key="findIngredientsBtn" data-edit-label="Pulsante Trova ingredienti">Trova ingredienti</div>
           </div>
         </div>
 
@@ -329,12 +361,20 @@ input.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});
 let selectedEditable=null;
 const propertiesPanel=document.getElementById('propertiesPanel');
 const selectedElementName=document.getElementById('selectedElementName');
+const propText=document.getElementById('propText');
 const propFontSize=document.getElementById('propFontSize');
 const propFontWeight=document.getElementById('propFontWeight');
 const propColor=document.getElementById('propColor');
 const propTextAlign=document.getElementById('propTextAlign');
 const propMarginTop=document.getElementById('propMarginTop');
 const propMarginBottom=document.getElementById('propMarginBottom');
+const propBackgroundColor=document.getElementById('propBackgroundColor');
+const propRadius=document.getElementById('propRadius');
+const propBorderWidth=document.getElementById('propBorderWidth');
+const propBorderColor=document.getElementById('propBorderColor');
+const propWidth=document.getElementById('propWidth');
+const propMinHeight=document.getElementById('propMinHeight');
+const propVisible=document.getElementById('propVisible');
 
 function rgbToHex(rgb){
   if(!rgb)return '#111111';
@@ -345,8 +385,10 @@ function rgbToHex(rgb){
 }
 function applySavedElementStyles(){
   document.querySelectorAll('[data-edit-key]').forEach(el=>{
-    const s=projectState.styles[el.dataset.editKey];
+    const key=el.dataset.editKey;
+    const s=projectState.styles[key];
     if(s)Object.assign(el.style,s);
+    if(projectState.texts&&projectState.texts[key]!==undefined)el.textContent=projectState.texts[key];
   });
 }
 function selectEditable(el){
@@ -356,6 +398,7 @@ function selectEditable(el){
   propertiesPanel.classList.add('show');
   selectedElementName.textContent=el.dataset.editLabel||'Elemento';
   const cs=getComputedStyle(el);
+  propText.value=el.textContent.trim();
   propFontSize.value=parseInt(cs.fontSize)||16;
   const fw=parseInt(cs.fontWeight)||400;
   propFontWeight.value=[400,600,700,800].reduce((a,b)=>Math.abs(b-fw)<Math.abs(a-fw)?b:a,400);
@@ -363,22 +406,40 @@ function selectEditable(el){
   propTextAlign.value=cs.textAlign==='center'?'center':(cs.textAlign==='right'?'right':'left');
   propMarginTop.value=parseInt(cs.marginTop)||0;
   propMarginBottom.value=parseInt(cs.marginBottom)||0;
+  propBackgroundColor.value=rgbToHex(cs.backgroundColor==='rgba(0, 0, 0, 0)'?'#ffffff':cs.backgroundColor);
+  propRadius.value=parseInt(cs.borderRadius)||0;
+  propBorderWidth.value=parseInt(cs.borderWidth)||0;
+  propBorderColor.value=rgbToHex(cs.borderColor);
+  propWidth.value=Math.round((el.getBoundingClientRect().width/el.parentElement.getBoundingClientRect().width)*100)||100;
+  propMinHeight.value=parseInt(cs.minHeight)||0;
+  propVisible.checked=cs.display!=='none';
 }
 function updateSelectedStyle(){
   if(!selectedEditable)return;
+  if(propText.value!==selectedEditable.textContent.trim()) selectedEditable.textContent=propText.value;
   const style={
     fontSize:propFontSize.value+'px',
     fontWeight:propFontWeight.value,
     color:propColor.value,
     textAlign:propTextAlign.value,
     marginTop:propMarginTop.value+'px',
-    marginBottom:propMarginBottom.value+'px'
+    marginBottom:propMarginBottom.value+'px',
+    backgroundColor:propBackgroundColor.value,
+    borderRadius:propRadius.value+'px',
+    borderWidth:propBorderWidth.value+'px',
+    borderStyle:Number(propBorderWidth.value)>0?'solid':'none',
+    borderColor:propBorderColor.value,
+    width:propWidth.value+'%',
+    minHeight:propMinHeight.value+'px',
+    display:propVisible.checked?'':'none'
   };
   Object.assign(selectedEditable.style,style);
   projectState.styles[selectedEditable.dataset.editKey]=style;
+  projectState.texts=projectState.texts||{};
+  projectState.texts[selectedEditable.dataset.editKey]=selectedEditable.textContent;
   saveProjectState();
 }
-[propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom].forEach(x=>x.addEventListener('input',updateSelectedStyle));
+[propText,propFontSize,propFontWeight,propColor,propTextAlign,propMarginTop,propMarginBottom,propBackgroundColor,propRadius,propBorderWidth,propBorderColor,propWidth,propMinHeight,propVisible].forEach(x=>x.addEventListener('input',updateSelectedStyle));
 document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();selectEditable(el)}));
 document.getElementById('closePropertiesBtn').onclick=()=>{
   if(selectedEditable)selectedEditable.classList.remove('selected');
