@@ -119,21 +119,14 @@ body.resizing{cursor:col-resize;user-select:none}
           <div class="sub">Rivedi le spese concluse per data.</div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-              <button class="ctl" style="padding:6px 10px">‹</button>
-              <h3 style="margin:0">Settembre 2026</h3>
-              <button class="ctl" style="padding:6px 10px">›</button>
+              <button class="ctl" id="prevMonthBtn" style="padding:6px 10px">‹</button>
+              <h3 id="calendarTitle" style="margin:0">Settembre 2026</h3>
+              <button class="ctl" id="nextMonthBtn" style="padding:6px 10px">›</button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px;font-size:11px;text-align:center">
-              <div>L</div><div>M</div><div>M</div><div>G</div><div>V</div><div>S</div><div>D</div>
-              <div></div><div class="field" style="padding:7px;margin:0">1</div><div class="field" style="padding:7px;margin:0">2</div><div class="field" style="padding:7px;margin:0">3</div><div class="field" style="padding:7px;margin:0">4</div><div class="field" style="padding:7px;margin:0">5</div><div class="field" style="padding:7px;margin:0">6</div>
-              <div class="field" style="padding:7px;margin:0">7</div><div class="field" style="padding:7px;margin:0">8</div><div class="field" style="padding:7px;margin:0">9</div><div class="field" style="padding:7px;margin:0">10</div><div class="field" style="padding:7px;margin:0">11</div><div class="field" style="padding:7px;margin:0">12</div><div class="field" style="padding:7px;margin:0">13</div>
-              <div class="field" style="padding:7px;margin:0">14</div><div class="field" style="padding:7px;margin:0">15</div><div class="field" style="padding:7px;margin:0">16</div><div class="field" style="padding:7px;margin:0">17</div><div class="field" style="padding:7px;margin:0">18</div><div class="field" style="padding:7px;margin:0">19</div><div class="field" style="padding:7px;margin:0">20</div>
-              <div class="field" style="padding:7px;margin:0">21</div><div class="field" style="padding:7px;margin:0">22</div><div class="field" style="padding:7px;margin:0">23</div><div class="field" style="padding:7px;margin:0">24</div><div class="field" style="padding:7px;margin:0">25</div><div class="field" style="padding:7px;margin:0">26</div><div class="field" style="padding:7px;margin:0;background:#007aff;color:#fff">27</div>
-              <div class="field" style="padding:7px;margin:0">28</div><div class="field" style="padding:7px;margin:0">29</div><div class="field" style="padding:7px;margin:0">30</div><div></div><div></div><div></div><div></div>
-            </div>
+            <div id="calendarGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px;font-size:11px;text-align:center"></div>
           </div>
           <div class="card">
-            <h3>Acquisti del 27 set 2026</h3>
+            <h3 id="historySelectionTitle">Acquisti del 27 set 2026</h3>
             <div style="color:#8e8e93;font-size:13px">Lo storico apparirà qui quando la funzione sarà attiva.</div>
           </div>
         </div>
@@ -200,6 +193,9 @@ const chat=document.querySelector('.chat');
 const decisionsList=document.getElementById('decisionsList');
 const toastEl=document.getElementById('toast');
 const featureState={history:false,recipes:false,share:false};
+const PROJECT_KEY='ideainapp_demo_project_v1';
+const projectState=JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}');
+function saveProjectState(){localStorage.setItem(PROJECT_KEY,JSON.stringify(projectState))}
 
 function toast(msg){
   toastEl.textContent=msg;
@@ -222,6 +218,8 @@ function addDecision(text){
   d.className='decision';
   d.textContent='✓ '+text;
   decisionsList.appendChild(d);
+  projectState.decisions=[...decisionsList.querySelectorAll('.decision')].map(x=>x.textContent);
+  saveProjectState();
 }
 function switchPhoneScreen(name){
   document.querySelectorAll('.appScreen').forEach(s=>s.classList.remove('active'));
@@ -230,6 +228,8 @@ function switchPhoneScreen(name){
   const tab=document.querySelector('.tab[data-screen="'+name+'"]');
   if(screen)screen.classList.add('active');
   if(tab)tab.classList.add('active');
+  projectState.activeScreen=name;
+  saveProjectState();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchPhoneScreen(t.dataset.screen)));
 
@@ -275,6 +275,41 @@ send.onclick=()=>{
   setTimeout(()=>applyRequest(v),180);
 };
 input.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});
+
+const monthNames=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+let calendarDate=new Date(projectState.calendarYear??2026,projectState.calendarMonth??8,1);
+let selectedDay=projectState.selectedDay??27;
+function renderCalendar(){
+  const y=calendarDate.getFullYear(), m=calendarDate.getMonth();
+  document.getElementById('calendarTitle').textContent=monthNames[m]+' '+y;
+  const grid=document.getElementById('calendarGrid');
+  grid.innerHTML='';
+  ['L','M','M','G','V','S','D'].forEach(d=>{const x=document.createElement('div');x.textContent=d;grid.appendChild(x)});
+  const first=(new Date(y,m,1).getDay()+6)%7;
+  const days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++){grid.appendChild(document.createElement('div'))}
+  for(let d=1;d<=days;d++){
+    const x=document.createElement('button');
+    x.className='field';
+    x.style.cssText='padding:7px;margin:0;border:0;cursor:pointer';
+    x.textContent=d;
+    if(d===selectedDay){x.style.background='#007aff';x.style.color='#fff'}
+    x.onclick=()=>{selectedDay=d;projectState.selectedDay=d;saveProjectState();renderCalendar()};
+    grid.appendChild(x);
+  }
+  const mon=monthNames[m].slice(0,3).toLowerCase();
+  document.getElementById('historySelectionTitle').textContent='Acquisti del '+selectedDay+' '+mon+' '+y;
+  projectState.calendarYear=y;projectState.calendarMonth=m;saveProjectState();
+}
+document.getElementById('prevMonthBtn').onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);selectedDay=1;renderCalendar()};
+document.getElementById('nextMonthBtn').onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);selectedDay=1;renderCalendar()};
+renderCalendar();
+
+if(Array.isArray(projectState.decisions)&&projectState.decisions.length){
+  decisionsList.innerHTML='';
+  projectState.decisions.forEach(txt=>{const d=document.createElement('div');d.className='decision';d.textContent=txt;decisionsList.appendChild(d)});
+}
+if(projectState.activeScreen) switchPhoneScreen(projectState.activeScreen);
 
 const shareModal=document.getElementById('shareModal');
 const qrBox=document.getElementById('qrBox');
