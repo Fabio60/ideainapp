@@ -259,6 +259,7 @@ body.publishedApp .blankBottomDock .mobileBottomNav{box-shadow:0 -1px 10px #0000
             <option value="closeModal">Chiudi popup</option>
             <option value="goBack">Indietro</option>
             <option value="pickImage">Scegli foto / file</option>
+            <option value="analyzeImage">Analizza immagine con IA</option>
             <option value="getLocation">Ottieni posizione</option>
             <option value="openMap">Apri mappa</option>
             <option value="filterList">Filtra lista</option>
@@ -970,6 +971,93 @@ function normalizeExternalUrl(v){
   return 'https://'+s;
 }
 
+function normalizeFieldName(v){
+  return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+function businessFieldAliases(key){
+  const k=normalizeFieldName(key);
+  const map={
+    nome:['nome','name','first name'],
+    cognome:['cognome','surname','last name'],
+    azienda:['azienda','societa','company','organization','organizzazione'],
+    ruolo:['ruolo','qualifica','job title','title','position'],
+    telefono:['telefono','cellulare','mobile','phone','tel'],
+    email:['email','e mail','mail'],
+    sito:['sito','website','web','url'],
+    indirizzo:['indirizzo','address','sede'],
+    citta:['citta','city'],
+    cap:['cap','zip','postal code']
+  };
+  for(const [canon,aliases] of Object.entries(map)){
+    if(canon===k || aliases.some(x=>normalizeFieldName(x)===k))return [canon,...aliases];
+  }
+  return [k];
+}
+function findFieldForExtractedKey(key,explicitLabel=''){
+  if(explicitLabel){
+    const direct=findComponentByAI(explicitLabel,'');
+    if(direct)return direct;
+  }
+  const aliases=businessFieldAliases(key).map(normalizeFieldName);
+  let best=null,bestScore=0;
+  for(const screen of Object.keys(projectState.components||{})){
+    for(const cmp of (projectState.components[screen]||[])){
+      if(!['input','textarea','text','select'].includes(cmp.type))continue;
+      const hay=normalizeFieldName([cmp.label,cmp.placeholder,cmp.text,cmp.title].filter(Boolean).join(' '));
+      if(!hay)continue;
+      let score=0;
+      for(const alias of aliases){
+        if(hay===alias)score=Math.max(score,100);
+        else if(hay.includes(alias)||alias.includes(hay))score=Math.max(score,70);
+      }
+      if(score>bestScore){best={cmp,screen};bestScore=score}
+    }
+  }
+  return best?.cmp||null;
+}
+async function fileToOptimizedDataUrl(file){
+  const raw=await new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+  if(!String(file.type||'').startsWith('image/'))return raw;
+  try{
+    const img=await new Promise((resolve,reject)=>{
+      const el=new Image();
+      el.onload=()=>resolve(el);
+      el.onerror=reject;
+      el.src=raw;
+    });
+    const maxSide=1600;
+    const scale=Math.min(1,maxSide/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+    canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL('image/jpeg',0.82);
+  }catch{return raw}
+}
+async function chooseImageFile(accept='image/*'){
+  return await new Promise(resolve=>{
+    const picker=document.createElement('input');
+    picker.type='file';
+    picker.accept=accept;
+    picker.onchange=async()=>{
+      const file=picker.files?.[0];
+      if(!file){resolve(null);return}
+      try{
+        const dataUrl=await fileToOptimizedDataUrl(file);
+        window.__ideaLastImageData=dataUrl;
+        window.__ideaLastImageName=file.name||'immagine';
+        resolve({file,dataUrl});
+      }catch{resolve(null)}
+    };
+    picker.click();
+  });
+}
+
 async function executeBuilderAction(a){
   if(!a)return;
 
@@ -1184,14 +1272,62 @@ async function executeBuilderAction(a){
   }
 
   if(a.type==='pickImage'){
-    const picker=document.createElement('input');
-    picker.type='file';
-    picker.accept=a.accept||'image/*';
-    picker.onchange=()=>{
-      const file=picker.files?.[0];
-      if(file)toast('Selezionato: '+file.name);
-    };
-    picker.click();
+    const picked=await chooseImageFile(a.accept||'image/*');
+    if(picked){
+      toast('Foto pronta');
+      if(a.target){
+        const found=findBuilderComponent(a.target);
+        if(found?.cmp){
+          found.cmp.fileName=picked.file.name||'immagine';
+          found.cmp.hasImage=true;
+          saveProjectState();
+          renderBuilder();
+        }
+      }
+    }
+  }
+
+  if(a.type==='analyzeImage'){
+    let imageData=window.__ideaLastImageData||'';
+    if(!imageData){
+      const picked=await chooseImageFile('image/*');
+      if(!picked)return;
+      imageData=picked.dataUrl;
+    }
+    const requestedFields=Array.isArray(a.fields)&&a.fields.length
+      ? a.fields
+      : ['nome','cognome','azienda','ruolo','telefono','email','sito','indirizzo'];
+    toast('Analizzo la foto…');
+    try{
+      const r=await fetch('/api/vision',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          image:imageData,
+          fields:requestedFields,
+          context:a.context||a.value||'Estrai i dati utili dall’immagine.'
+        })
+      });
+      const out=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(out.error||'VISION_FAILED');
+      const data=out.data||{};
+      const fieldMap=(a.fieldMap&&typeof a.fieldMap==='object')?a.fieldMap:{};
+      let filled=0;
+      for(const [key,value] of Object.entries(data)){
+        if(value===null || value===undefined || String(value).trim()==='')continue;
+        const cmp=findFieldForExtractedKey(key,fieldMap[key]||'');
+        if(!cmp)continue;
+        if(['input','textarea','select'].includes(cmp.type))cmp.value=String(value);
+        else if(cmp.type==='text')cmp.text=String(value);
+        filled++;
+      }
+      saveProjectState();
+      renderBuilder();
+      toast(filled?'Dati estratti: '+filled+' campi compilati':'Dati letti, nessun campo corrispondente');
+    }catch(e){
+      console.error(e);
+      toast('Non riesco ad analizzare la foto');
+    }
   }
 
   if(a.type==='getLocation'){
@@ -1479,7 +1615,11 @@ function renderBuilder(){
       }else if(cmp.type==='progress'){
         const p=document.createElement('div');p.className='progressTrack';const fill=document.createElement('div');fill.className='progressFill';fill.style.width=(cmp.value??65)+'%';p.appendChild(fill);body.appendChild(p);
       }else if(cmp.type==='upload'){
-        const u=document.createElement('div');u.className='uploadBox';u.innerHTML='<div style="font-size:26px">＋</div><div></div>';u.lastElementChild.textContent=cmp.text||'Aggiungi foto o file';body.appendChild(u);
+        const u=document.createElement('div');u.className='uploadBox';
+        u.innerHTML='<div style="font-size:26px"></div><div></div>';
+        u.firstElementChild.textContent=cmp.hasImage?'✓':'＋';
+        u.lastElementChild.textContent=cmp.hasImage?(cmp.fileName||'Foto pronta'):(cmp.text||'Aggiungi foto o file');
+        body.appendChild(u);
       }else if(cmp.type==='map'){
         const m=document.createElement('div');m.className='mapPlaceholder';const s=document.createElement('span');s.textContent=cmp.text||'Mappa / posizione';m.appendChild(s);body.appendChild(m);
       }else if(cmp.type==='clock'){
