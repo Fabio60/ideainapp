@@ -450,11 +450,25 @@ function normalizeProjectState(){
   projectState.projectMode=projectState.projectMode||'blank';
   projectState.platform=projectState.platform||'ios';
 }
+function clearActionEntryOnStartup(){
+  for(const screen of Object.keys(projectState.components||{})){
+    for(const cmp of (projectState.components[screen]||[])){
+      if(!['input','textarea'].includes(cmp.type))continue;
+      const name=((cmp.label||'')+' '+(cmp.placeholder||'')).toLowerCase();
+      if(name.includes('azione') || name.includes('ricordare')){
+        cmp.value='';
+        return;
+      }
+    }
+  }
+}
 async function loadPublishedAppFromCloud(){
   if(!IS_PUBLISHED)return false;
   try{
     if(savedRuntime && savedRuntime.components){
       normalizeProjectState();
+      clearActionEntryOnStartup();
+      saveProjectState();
       renderBuilder();
       setProjectMode(projectState.projectMode==='example'?'example':'blank');
       if(projectState.projectMode==='example' && projectState.activeScreen)switchPhoneScreen(projectState.activeScreen);
@@ -470,6 +484,7 @@ async function loadPublishedAppFromCloud(){
     Object.keys(projectState).forEach(k=>delete projectState[k]);
     Object.assign(projectState,rows[0].config);
     normalizeProjectState();
+    clearActionEntryOnStartup();
     saveProjectState();
     renderBuilder();
     setProjectMode(projectState.projectMode==='example'?'example':'blank');
@@ -672,10 +687,14 @@ function removeBuilderComponent(id){
 function currentTimeHHMM(){
   return new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit'}).format(new Date());
 }
-function updateLiveClocks(){
-  document.querySelectorAll('[data-live-clock="1"]').forEach(el=>el.textContent=currentTimeHHMM());
+function currentTimeClock(){
+  return new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
 }
-if(!window.__ideaClockTimer)window.__ideaClockTimer=setInterval(updateLiveClocks,30000);
+function updateLiveClocks(){
+  document.querySelectorAll('[data-live-clock="1"]').forEach(el=>el.textContent=currentTimeClock());
+}
+if(!window.__ideaClockTimer)window.__ideaClockTimer=setInterval(updateLiveClocks,1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateLiveClocks()});
 
 function collectReminderRecord(){
   const record={id:'rem_'+Date.now(),createdAt:new Date().toISOString(),createdTime:currentTimeHHMM()};
@@ -1022,7 +1041,7 @@ function renderBuilder(){
         d.style.fontSize='24px';
         d.style.fontWeight='700';
         d.style.padding='10px 0';
-        d.textContent=currentTimeHHMM();
+        d.textContent=currentTimeClock();
         body.appendChild(d);
       }else if(cmp.type==='archive'){
         const box=document.createElement('div');
