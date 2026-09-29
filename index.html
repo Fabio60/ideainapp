@@ -376,6 +376,7 @@ projectState.styles=projectState.styles||{};
 projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
 projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
 projectState.actions=projectState.actions||{};
+projectState.archives=projectState.archives||{reminders:[]};
 projectState.projectMode=projectState.projectMode||'blank';
 projectState.platform=projectState.platform||'ios';
 function saveProjectState(){localStorage.setItem(PROJECT_KEY,JSON.stringify(projectState))}
@@ -459,7 +460,8 @@ function populateBuilderProperties(cmp, visual){
   propFieldMode.disabled=!isField;
   propFieldMode.value=cmp.mode==='readonly'?'readonly':'editable';
 
-  const a=projectState.actions[cmp.id]||{};
+  const rawAction=projectState.actions[cmp.id]||{};
+  const a=Array.isArray(rawAction)?(rawAction[0]||{}):rawAction;
   propActionType.value=a.type||'';
   propActionTarget.value=a.target||'';
   propActionValue.value=a.value||'';
@@ -501,6 +503,8 @@ function componentDefaults(type){
   if(type==='progress')return{id,type,label:'Avanzamento',value:65};
   if(type==='upload')return{id,type,label:'Foto / File',text:'Aggiungi foto o file'};
   if(type==='map')return{id,type,label:'Mappa',text:'Mappa / posizione'};
+  if(type==='archive')return{id,type,label:'Archivio promemoria',archiveKey:'reminders'};
+  if(type==='clock')return{id,type,label:'Ora attuale',format:'HH:MM',align:'center'};
   return{id,type,label:'Elemento'};
 }
 function addBuilderComponent(type,screen=activeScreenName(),silent=false){
@@ -563,6 +567,46 @@ function removeBuilderComponent(id){
   selectedBuilderId=null;
   selectedBuilderItemIndex=null;
 }
+function currentTimeHHMM(){
+  return new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit'}).format(new Date());
+}
+function updateLiveClocks(){
+  document.querySelectorAll('[data-live-clock="1"]').forEach(el=>el.textContent=currentTimeHHMM());
+}
+if(!window.__ideaClockTimer)window.__ideaClockTimer=setInterval(updateLiveClocks,30000);
+
+function collectReminderRecord(){
+  const record={id:'rem_'+Date.now(),createdAt:new Date().toISOString(),createdTime:currentTimeHHMM()};
+  for(const screen of Object.keys(projectState.components||{})){
+    for(const cmp of (projectState.components[screen]||[])){
+      if(['input','textarea','date','time','select','search'].includes(cmp.type) && cmp.value!==undefined && cmp.value!==''){
+        const key=(cmp.label||cmp.placeholder||cmp.type).trim();
+        record[key]=cmp.value;
+        if(cmp.type==='time')record.reminderTime=cmp.value;
+        if(cmp.type==='date')record.reminderDate=cmp.value;
+        if((cmp.type==='input'||cmp.type==='textarea') && !record.actionText)record.actionText=cmp.value;
+      }
+    }
+  }
+  return record;
+}
+function scheduleLocalReminder(record){
+  const when=(record.reminderDate?record.reminderDate:new Date().toISOString().slice(0,10))+'T'+(record.reminderTime||'');
+  const target=new Date(when);
+  const delay=target.getTime()-Date.now();
+  if(!record.reminderTime || !Number.isFinite(delay) || delay<=0)return;
+  if(delay>2147483647)return;
+  window.setTimeout(()=>{
+    const text=record.actionText||'Promemoria';
+    if('Notification' in window && Notification.permission==='granted')new Notification(text);
+    else toast('⏰ '+text);
+  },delay);
+}
+function executeBuilderActions(actions){
+  const list=Array.isArray(actions)?actions:[actions];
+  for(const action of list)executeBuilderAction(action);
+}
+
 function executeBuilderAction(a){
   if(!a)return;
   if(a.type==='toast' && a.value)toast(a.value);
@@ -620,6 +664,34 @@ function executeBuilderAction(a){
       saveProjectState();renderBuilder();
     }
   }
+  if(a.type==='saveRecord'){
+    const record=collectReminderRecord();
+    projectState.archives.reminders=projectState.archives.reminders||[];
+    projectState.archives.reminders.push(record);
+    saveProjectState();
+    scheduleLocalReminder(record);
+    if('Notification' in window && Notification.permission==='default'){
+      Notification.requestPermission().catch(()=>{});
+    }
+    renderBuilder();
+    toast('Promemoria salvato');
+  }
+  if(a.type==='showCurrentTime'){
+    let found=a.target?findBuilderComponent(a.target):null;
+    if(!found){
+      const cmp=addBuilderComponent('clock',activeScreenName(),true);
+      cmp.label='Ora attuale';
+      found={cmp};
+    }
+    found.cmp.visible=true;
+    saveProjectState();
+    renderBuilder();
+    updateLiveClocks();
+  }
+  if(a.type==='scheduleReminder'){
+    const list=projectState.archives?.reminders||[];
+    if(list.length)scheduleLocalReminder(list[list.length-1]);
+  }
   if(a.type==='navigate' && a.target && projectState.projectMode==='example')switchPhoneScreen(a.target);
   if(a.type==='openDrawer')toggleDrawer();
 }
@@ -645,13 +717,13 @@ function renderBuilder(){
       }else if(cmp.type==='text'){
         const d=document.createElement('div');d.textContent=cmp.text||'Testo';body.appendChild(d);
       }else if(cmp.type==='input'){
-        const i=document.createElement('input');i.type='text';i.placeholder=cmp.placeholder||'Scrivi qui…';i.readOnly=cmp.mode==='readonly';body.appendChild(i);
+        const i=document.createElement('input');i.type='text';i.placeholder=cmp.placeholder||'Scrivi qui…';i.readOnly=cmp.mode==='readonly';i.value=cmp.value||'';i.oninput=()=>{cmp.value=i.value;saveProjectState()};body.appendChild(i);
       }else if(cmp.type==='textarea'){
-        const t=document.createElement('textarea');t.placeholder=cmp.placeholder||'Scrivi qui…';t.readOnly=cmp.mode==='readonly';body.appendChild(t);
+        const t=document.createElement('textarea');t.placeholder=cmp.placeholder||'Scrivi qui…';t.readOnly=cmp.mode==='readonly';t.value=cmp.value||'';t.oninput=()=>{cmp.value=t.value;saveProjectState()};body.appendChild(t);
       }else if(cmp.type==='date'){
-        const i=document.createElement('input');i.type='date';i.disabled=cmp.mode==='readonly';body.appendChild(i);
+        const i=document.createElement('input');i.type='date';i.disabled=cmp.mode==='readonly';i.value=cmp.value||'';i.oninput=()=>{cmp.value=i.value;saveProjectState()};body.appendChild(i);
       }else if(cmp.type==='select'){
-        const s=document.createElement('select');(cmp.options||[]).forEach(opt=>{const o=document.createElement('option');o.textContent=opt;s.appendChild(o)});s.disabled=cmp.mode==='readonly';body.appendChild(s);
+        const s=document.createElement('select');(cmp.options||[]).forEach(opt=>{const o=document.createElement('option');o.textContent=opt;s.appendChild(o)});s.disabled=cmp.mode==='readonly';if(cmp.value)s.value=cmp.value;s.oninput=()=>{cmp.value=s.value;saveProjectState()};body.appendChild(s);
       }else if(cmp.type==='radio'){
         (cmp.options||[]).forEach((opt,idx)=>{
           const row=document.createElement('label');row.className='radioRow';
@@ -698,9 +770,8 @@ function renderBuilder(){
             if(previewMode){
               const key=cmp.id+':'+idx;
               const a=projectState.actions[key]||{};
-              if(a.type==='toast' && a.value)toast(a.value);
-              if(a.type==='navigate' && a.target && projectState.projectMode==='example')switchPhoneScreen(a.target);
-              if(['show','hide','toggle','setText'].includes(a.type) && a.target){
+              executeBuilderActions(a);
+              if(false && ['show','hide','toggle','setText'].includes(a.type) && a.target){
                 const target=document.querySelector('[data-builder-id="'+a.target+'"]');
                 if(target){
                   if(a.type==='show'){
@@ -729,7 +800,7 @@ function renderBuilder(){
             propText.value=cmp.items[idx]||'Pulsante '+(idx+1);
             propWidth.value=100;
             propMinHeight.value=96;
-            const a=projectState.actions[cmp.id+':'+idx]||{};
+            const rawAction=projectState.actions[cmp.id+':'+idx]||{}; const a=Array.isArray(rawAction)?(rawAction[0]||{}):rawAction;
             propActionType.value=a.type||'';
             propActionTarget.value=a.target||'';
             propActionValue.value=a.value||'';
@@ -756,7 +827,7 @@ function renderBuilder(){
           cell.onclick=e=>{
             e.stopPropagation();
             if(previewMode){
-              executeBuilderAction(projectState.actions[cmp.id+':'+idx]||{});
+              executeBuilderActions(projectState.actions[cmp.id+':'+idx]||{});
               return;
             }
             selectedBuilderId=cmp.id;
@@ -765,7 +836,7 @@ function renderBuilder(){
             const current=document.querySelector('[data-builder-id="'+cmp.id+'"] .mobileBottomItem[data-nav-index="'+idx+'"]');
             populateBuilderProperties(cmp,current);
             propText.value=cmp.items[idx]||('Menu '+(idx+1));
-            const a=projectState.actions[cmp.id+':'+idx]||{};
+            const rawAction=projectState.actions[cmp.id+':'+idx]||{}; const a=Array.isArray(rawAction)?(rawAction[0]||{}):rawAction;
             propActionType.value=a.type||'';
             propActionTarget.value=a.target||'';
             propActionValue.value=a.value||'';
@@ -800,7 +871,7 @@ function renderBuilder(){
       }else if(cmp.type==='advancedcard'){
         const a=document.createElement('div');a.className='advancedCard';a.innerHTML='<div class="advancedCardMedia"></div><div class="advancedCardBody"><h4></h4><p></p></div>';a.querySelector('h4').textContent=cmp.title||'Titolo';a.querySelector('p').textContent=cmp.subtitle||'Descrizione';body.appendChild(a);
       }else if(cmp.type==='time'){
-        const i=document.createElement('input');i.type='time';i.disabled=cmp.mode==='readonly';body.appendChild(i);
+        const i=document.createElement('input');i.type='time';i.disabled=cmp.mode==='readonly';i.value=cmp.value||'';i.oninput=()=>{cmp.value=i.value;saveProjectState()};body.appendChild(i);
       }else if(cmp.type==='slider'){
         const i=document.createElement('input');i.type='range';i.min='0';i.max='100';i.value=cmp.value??50;i.style.width='100%';body.appendChild(i);
       }else if(cmp.type==='stepper'){
@@ -829,8 +900,8 @@ function renderBuilder(){
           if(cmp.type==='hamburger' || (cmp.type==='header' && cmp.left==='hamburger')){toggleDrawer();return}
           if(cmp.type==='drawer'){return}
           const a=projectState.actions[cmp.id]||{};
-          if(a.type==='toast' && a.value) toast(a.value);
-          if(['show','hide','toggle','setText'].includes(a.type) && a.target){
+          executeBuilderActions(a);
+          if(false && ['show','hide','toggle','setText'].includes(a.type) && a.target){
             const target=document.querySelector('[data-builder-id="'+a.target+'"]');
             if(target){
               if(a.type==='show'){
@@ -901,7 +972,7 @@ function renderBuilder(){
           const current=document.querySelector('#blankBottomDock [data-builder-id="'+cmp.id+'"] .mobileBottomItem[data-nav-index="'+idx+'"]');
           populateBuilderProperties(cmp,current);
           propText.value=cmp.items[idx]||('Menu '+(idx+1));
-          const a=projectState.actions[cmp.id+':'+idx]||{};
+          const rawAction=projectState.actions[cmp.id+':'+idx]||{}; const a=Array.isArray(rawAction)?(rawAction[0]||{}):rawAction;
           propActionType.value=a.type||'';
           propActionTarget.value=a.target||'';
           propActionValue.value=a.value||'';
@@ -1136,11 +1207,19 @@ function applyAIPlan(plan){
         if(['show','toggle'].includes(op.action_type))target.visible=false;
       }
 
-      projectState.actions[source.key]={
+      const nextAction={
         type:op.action_type,
         target:target?.id || op.target_label || '',
         value:op.value||''
       };
+      const existing=projectState.actions[source.key];
+      if(existing){
+        const arr=Array.isArray(existing)?existing:[existing];
+        const duplicate=arr.some(x=>x.type===nextAction.type && x.target===nextAction.target && x.value===nextAction.value);
+        projectState.actions[source.key]=duplicate?arr:arr.concat(nextAction);
+      }else{
+        projectState.actions[source.key]=nextAction;
+      }
       done.push((op.source_label||'elemento')+' → '+op.action_type+(op.target_label?' '+op.target_label:''));
     }
 
