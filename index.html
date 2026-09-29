@@ -33,11 +33,30 @@ body.resizing{cursor:col-resize;user-select:none}
 .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-right:6%}.ctl{border:1px solid #dfe3e8;background:#fff;border-radius:12px;padding:10px 14px;font-weight:700}.ctl.primary{background:#3478f6;color:#fff;border-color:#3478f6}
 .featureCard{display:none}.featureCard.show{display:block;animation:featureIn .28s ease}.featureCard h3{display:flex;align-items:center;gap:8px}.newBadge{display:inline-block;background:#34c759;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:3px 7px;text-transform:uppercase;letter-spacing:.4px}@keyframes featureIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.modal.hidden{display:none}.modalBox{width:min(420px,100%);background:#fff;border-radius:22px;padding:20px;box-shadow:0 24px 80px #0005}.modalBox h2{margin:0 0 8px}.modalActions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}.modalActions button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:700}.modalActions .primary{background:#3478f6;color:#fff}.modalActions .secondary{background:#eef0f4;color:#111}.qrBox{display:grid;place-items:center;padding:18px 0}.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#111318;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;z-index:120;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}
+body.publishedApp{background:#f2f2f7}
+body.publishedApp .topbar,
+body.publishedApp .sidebar,
+body.publishedApp .resizeHandle,
+body.publishedApp .previewTop,
+body.publishedApp .properties,
+body.publishedApp .controls{display:none!important}
+body.publishedApp .workspace{display:block;min-height:100vh}
+body.publishedApp .previewArea{padding:0;display:block;overflow:visible}
+body.publishedApp .phone{width:100%;max-width:none;border:0;border-radius:0;box-shadow:none;margin:0;background:#f2f2f7}
+body.publishedApp .phoneTop{display:none}
+body.publishedApp .phoneBody{height:100vh;min-height:100vh;padding:18px}
+body.publishedApp .builderComponent{background:transparent;border:0;padding:0;margin-top:10px}
+body.publishedApp .builderLabel,
+body.publishedApp .builderRemove,
+body.publishedApp .squareBtnDelete{display:none!important}
+body.publishedApp .builderComponent.selectedBuilder{outline:none!important}
+body.publishedApp .blankCanvas{padding-bottom:88px}
 @media(max-width:1200px){.properties{width:290px}.phone{margin-right:2%}.controls{padding-right:2%}}
 @media(max-width:1100px){.workspace{grid-template-columns:var(--sidebar-width,420px) 8px minmax(0,1fr)}.properties{position:static;width:100%;max-height:none;box-shadow:none}.phone{margin-right:2%}.controls{padding-right:2%}}
 @media(max-width:900px){.workspace{grid-template-columns:1fr}.resizeHandle{display:none}.sidebar{min-height:auto}.previewArea{padding-top:16px;align-items:center}.properties{width:100%}.phone{width:360px;margin:0 auto}.controls{justify-content:center;padding-right:0}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -353,7 +372,7 @@ body.resizing{cursor:col-resize;user-select:none}
 <div class="modal hidden" id="shareModal">
   <div class="modalBox">
     <h2 id="modalTitle">Condividi IdeaInApp</h2>
-    <div style="color:#6e6e73;font-size:14px" id="modalText">Condividi questa anteprima tramite link o QR.</div>
+    <div style="color:#6e6e73;font-size:14px" id="modalText">Il link e il QR aprono direttamente l’App sviluppata, senza l’editor IdeaInApp.</div>
     <div class="qrBox" id="qrBox"></div>
     <div class="modalActions">
       <button class="secondary" id="closeModalBtn">Chiudi</button>
@@ -371,7 +390,23 @@ const decisionsList=document.getElementById('decisionsList');
 const toastEl=document.getElementById('toast');
 const featureState={history:false,recipes:false,share:false};
 const PROJECT_KEY='ideainapp_demo_project_v1';
-const projectState=JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}');
+const APP_PARAM=new URLSearchParams(location.search).get('app');
+const IS_PUBLISHED=!!APP_PARAM;
+function appHash(s){
+  let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  return (h>>>0).toString(36);
+}
+let embeddedProject=null;
+if(IS_PUBLISHED && window.LZString){
+  try{
+    const json=LZString.decompressFromEncodedURIComponent(APP_PARAM);
+    if(json)embeddedProject=JSON.parse(json);
+  }catch(e){console.warn('Invalid published project',e)}
+}
+const RUNTIME_KEY=IS_PUBLISHED?'ideainapp_app_'+appHash(APP_PARAM):PROJECT_KEY;
+const savedRuntime=JSON.parse(localStorage.getItem(RUNTIME_KEY)||'null');
+const projectState=(IS_PUBLISHED?(savedRuntime||embeddedProject||{}):JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}'));
 projectState.styles=projectState.styles||{};
 projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
 projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
@@ -379,7 +414,7 @@ projectState.actions=projectState.actions||{};
 projectState.archives=projectState.archives||{reminders:[]};
 projectState.projectMode=projectState.projectMode||'blank';
 projectState.platform=projectState.platform||'ios';
-function saveProjectState(){localStorage.setItem(PROJECT_KEY,JSON.stringify(projectState))}
+function saveProjectState(){localStorage.setItem(RUNTIME_KEY,JSON.stringify(projectState))}
 
 function toast(msg){
   toastEl.textContent=msg;
@@ -1871,11 +1906,32 @@ if(Array.isArray(projectState.decisions)&&projectState.decisions.length){
 }
 setProjectMode(projectState.projectMode==='example'?'example':'blank');
 if(projectState.projectMode==='example' && projectState.activeScreen) switchPhoneScreen(projectState.activeScreen);
+if(IS_PUBLISHED){
+  document.body.classList.add('publishedApp');
+  previewMode=true;
+  document.querySelector('.phone')?.classList.add('preview-mode');
+  renderBuilder();
+  updateLiveClocks();
+  document.title='La mia App';
+}
 
 const shareModal=document.getElementById('shareModal');
 const qrBox=document.getElementById('qrBox');
-function shareUrl(){return location.origin+location.pathname}
-function openShare(title='Condividi IdeaInApp'){
+function publishedSnapshot(){
+  return {
+    components:projectState.components,
+    actions:projectState.actions,
+    archives:projectState.archives,
+    projectMode:projectState.projectMode,
+    platform:projectState.platform,
+    activeScreen:projectState.activeScreen
+  };
+}
+function shareUrl(){
+  const packed=LZString.compressToEncodedURIComponent(JSON.stringify(publishedSnapshot()));
+  return location.origin+location.pathname+'?app='+packed;
+}
+function openShare(title='Condividi la tua App'){
   document.getElementById('modalTitle').textContent=title;
   qrBox.innerHTML='';
   new QRCode(qrBox,{text:shareUrl(),width:190,height:190,correctLevel:QRCode.CorrectLevel.M});
@@ -1906,7 +1962,7 @@ document.getElementById('previewBtn').onclick=()=>{
 function generated(){
   addDecision('App pronta per la pubblicazione');
   openShare('La tua App è pronta');
-  document.getElementById('modalText').textContent='Questa è ancora una demo: il prossimo passo collegherà salvataggio, IA e pubblicazione reale.';
+  document.getElementById('modalText').textContent='Questo QR apre direttamente l’App sviluppata in modalità utente, senza mostrare l’editor IdeaInApp.';
 }
 document.getElementById('modeChip').onclick=()=>document.getElementById('previewBtn').click();
 document.getElementById('generateBtn').onclick=generated;
