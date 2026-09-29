@@ -503,6 +503,7 @@ function rememberDeletedReminder(id){
   ids.add(id);
   localStorage.setItem(DELETED_REMINDERS_KEY,JSON.stringify([...ids]));
 }
+window.__ideaImagePreviews=window.__ideaImagePreviews||{};
 const projectState=(IS_PUBLISHED?(savedRuntime||{}):JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}'));
 projectState.styles=projectState.styles||{};
 projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
@@ -526,6 +527,51 @@ function normalizeProjectState(){
   projectState.projectMode=projectState.projectMode||'blank';
   projectState.platform=projectState.platform||'ios';
   if(projectState.showBlankStart===undefined)projectState.showBlankStart=true;
+
+  // Compatibilità con i progetti già creati.
+  // Per app "biglietti da visita" completa automaticamente i campi mancanti
+  // e collega la foto all'analisi IA.
+  for(const screen of Object.keys(projectState.components||{})){
+    const list=projectState.components[screen]||[];
+    const joined=list.map(x=>[x.label,x.text,x.title,x.placeholder].filter(Boolean).join(' ')).join(' ').toLowerCase();
+    const isBusinessCard=/bigliett/.test(joined);
+    if(isBusinessCard){
+      const wanted=[
+        ['Nome','Nome'],['Cognome','Cognome'],['Azienda','Azienda'],['Ruolo','Ruolo'],
+        ['Telefono','Telefono'],['Email','Email'],['Sito','Sito web'],['Indirizzo','Indirizzo']
+      ];
+      for(const [label,placeholder] of wanted){
+        const exists=list.some(x=>['input','textarea'].includes(x.type) &&
+          ((x.label||'')+' '+(x.placeholder||'')).toLowerCase().includes(label.toLowerCase()));
+        if(!exists){
+          const cmp=componentDefaults('input');
+          cmp.label=label;
+          cmp.placeholder=placeholder;
+          list.push(cmp);
+        }
+      }
+      for(const up of list.filter(x=>x.type==='upload')){
+        up.accept='image/*';
+        const raw=projectState.actions[up.id];
+        const arr=raw?(Array.isArray(raw)?raw:[raw]):[];
+        if(!arr.some(x=>x?.type==='pickImage'))arr.unshift({type:'pickImage',target:up.id,value:'',accept:'image/*'});
+        if(!arr.some(x=>x?.type==='analyzeImage')){
+          arr.push({
+            type:'analyzeImage',
+            target:'',
+            value:'Biglietto da visita',
+            context:'Biglietto da visita',
+            fields:['nome','cognome','azienda','ruolo','telefono','email','sito','indirizzo'],
+            fieldMap:{
+              nome:'Nome',cognome:'Cognome',azienda:'Azienda',ruolo:'Ruolo',
+              telefono:'Telefono',email:'Email',sito:'Sito',indirizzo:'Indirizzo'
+            }
+          });
+        }
+        projectState.actions[up.id]=arr;
+      }
+    }
+  }
 
   // Compatibilità con i progetti già creati:
   // se "Ora attuale" era stata generata come campo time, trasformala in orologio live.
@@ -1295,6 +1341,7 @@ async function executeBuilderAction(a){
         if(found?.cmp){
           found.cmp.fileName=picked.file.name||'immagine';
           found.cmp.hasImage=true;
+          window.__ideaImagePreviews[a.target]=picked.dataUrl;
           saveProjectState();
           renderBuilder();
         }
@@ -1324,7 +1371,7 @@ async function executeBuilderAction(a){
         })
       });
       const out=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(out.error||'VISION_FAILED');
+      if(!r.ok)throw new Error(out.detail||out.error||'VISION_FAILED');
       const data=out.data||{};
       const fieldMap=(a.fieldMap&&typeof a.fieldMap==='object')?a.fieldMap:{};
       let filled=0;
@@ -1341,7 +1388,7 @@ async function executeBuilderAction(a){
       toast(filled?'Dati estratti: '+filled+' campi compilati':'Dati letti, nessun campo corrispondente');
     }catch(e){
       console.error(e);
-      toast('Non riesco ad analizzare la foto');
+      toast('Analisi foto non riuscita');
     }
   }
 
@@ -1631,9 +1678,22 @@ function renderBuilder(){
         const p=document.createElement('div');p.className='progressTrack';const fill=document.createElement('div');fill.className='progressFill';fill.style.width=(cmp.value??65)+'%';p.appendChild(fill);body.appendChild(p);
       }else if(cmp.type==='upload'){
         const u=document.createElement('div');u.className='uploadBox';
-        u.innerHTML='<div style="font-size:26px"></div><div></div>';
-        u.firstElementChild.textContent=cmp.hasImage?'✓':'＋';
-        u.lastElementChild.textContent=cmp.hasImage?(cmp.fileName||'Foto pronta'):(cmp.text||'Aggiungi foto o file');
+        const preview=window.__ideaImagePreviews?.[cmp.id];
+        if(preview){
+          u.innerHTML='<img alt="Foto selezionata"><div></div>';
+          const img=u.querySelector('img');
+          img.src=preview;
+          img.style.width='100%';
+          img.style.maxHeight='220px';
+          img.style.objectFit='contain';
+          img.style.borderRadius='12px';
+          img.style.display='block';
+          u.lastElementChild.textContent=cmp.fileName||'Foto pronta';
+        }else{
+          u.innerHTML='<div style="font-size:26px"></div><div></div>';
+          u.firstElementChild.textContent=cmp.hasImage?'✓':'＋';
+          u.lastElementChild.textContent=cmp.hasImage?(cmp.fileName||'Foto pronta'):(cmp.text||'Aggiungi foto o file');
+        }
         u.style.cursor='pointer';
         u.onclick=async e=>{
           if(!previewMode)return;
@@ -1649,6 +1709,7 @@ function renderBuilder(){
             if(picked){
               cmp.fileName=picked.file.name||'immagine';
               cmp.hasImage=true;
+              window.__ideaImagePreviews[cmp.id]=picked.dataUrl;
               saveProjectState();
               renderBuilder();
               toast('Foto pronta');
