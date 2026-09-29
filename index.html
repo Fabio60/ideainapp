@@ -668,6 +668,12 @@ function executeBuilderAction(a){
     const record=collectReminderRecord();
     projectState.archives.reminders=projectState.archives.reminders||[];
     projectState.archives.reminders.push(record);
+    let archiveCmp=findComponentByAI('Archivio promemoria','archive');
+    if(!archiveCmp){
+      archiveCmp=addBuilderComponent('archive',activeScreenName(),true);
+      archiveCmp.label='Archivio promemoria';
+    }
+    archiveCmp.visible=true;
     saveProjectState();
     scheduleLocalReminder(record);
     if('Notification' in window && Notification.permission==='default'){
@@ -888,6 +894,48 @@ function renderBuilder(){
         const u=document.createElement('div');u.className='uploadBox';u.innerHTML='<div style="font-size:26px">＋</div><div></div>';u.lastElementChild.textContent=cmp.text||'Aggiungi foto o file';body.appendChild(u);
       }else if(cmp.type==='map'){
         const m=document.createElement('div');m.className='mapPlaceholder';const s=document.createElement('span');s.textContent=cmp.text||'Mappa / posizione';m.appendChild(s);body.appendChild(m);
+      }else if(cmp.type==='clock'){
+        const d=document.createElement('div');
+        d.dataset.liveClock='1';
+        d.style.textAlign='center';
+        d.style.fontSize='24px';
+        d.style.fontWeight='700';
+        d.style.padding='10px 0';
+        d.textContent=currentTimeHHMM();
+        body.appendChild(d);
+      }else if(cmp.type==='archive'){
+        const box=document.createElement('div');
+        box.className='mobileCard';
+        box.style.padding='12px';
+        const title=document.createElement('div');
+        title.style.fontWeight='800';
+        title.style.marginBottom='8px';
+        title.textContent='Promemoria salvati';
+        box.appendChild(title);
+        const rows=projectState.archives?.[cmp.archiveKey||'reminders']||[];
+        if(!rows.length){
+          const empty=document.createElement('div');
+          empty.style.opacity='.6';
+          empty.style.fontSize='13px';
+          empty.textContent='Nessun promemoria salvato';
+          box.appendChild(empty);
+        }else{
+          rows.slice().reverse().forEach(r=>{
+            const row=document.createElement('div');
+            row.style.padding='9px 0';
+            row.style.borderTop='1px solid #e5e5ea';
+            const main=document.createElement('div');
+            main.style.fontWeight='700';
+            main.textContent=r.actionText||'Promemoria';
+            const meta=document.createElement('div');
+            meta.style.fontSize='12px';
+            meta.style.opacity='.65';
+            meta.style.marginTop='2px';
+            meta.textContent=(r.reminderDate?r.reminderDate+' · ':'')+(r.reminderTime||r.createdTime||'');
+            row.appendChild(main);row.appendChild(meta);box.appendChild(row);
+          });
+        }
+        body.appendChild(box);
       }
       const visual=body.firstElementChild||body;
       if(cmp.style)Object.assign(visual.style,cmp.style);
@@ -1205,6 +1253,8 @@ function applyAIPlan(plan){
         if(['text','button','badge','icon','upload','map'].includes(op.target_type))target.text=op.target_label||target.text;
         if(['header','drawer','modal','advancedcard'].includes(op.target_type))target.title=op.target_label||target.title;
         if(['show','toggle'].includes(op.action_type))target.visible=false;
+        if(op.target_type==='archive')target.visible=true;
+        if(op.target_type==='clock')target.visible=true;
       }
 
       const nextAction={
