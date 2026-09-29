@@ -51,7 +51,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-6-luna',
         instructions,
-        reasoning: { effort: 'none' },
+        reasoning: { effort: 'low' },
         max_output_tokens: 1200,
         input: [{
           role: 'user',
