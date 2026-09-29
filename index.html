@@ -44,13 +44,15 @@ body.publishedApp .workspace{display:block;min-height:100vh}
 body.publishedApp .previewArea{padding:0;display:block;overflow:visible}
 body.publishedApp .phone{width:100%;max-width:none;border:0;border-radius:0;box-shadow:none;margin:0;background:#f2f2f7}
 body.publishedApp .phoneTop{display:none}
-body.publishedApp .phoneBody{height:100vh;min-height:100vh;padding:18px}
+body.publishedApp .phoneBody{height:100dvh;min-height:100dvh;padding:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
 body.publishedApp .builderComponent{background:transparent;border:0;padding:0;margin-top:10px}
 body.publishedApp .builderLabel,
 body.publishedApp .builderRemove,
 body.publishedApp .squareBtnDelete{display:none!important}
 body.publishedApp .builderComponent.selectedBuilder{outline:none!important}
-body.publishedApp .blankCanvas{padding-top:76px;padding-bottom:88px}
+body.publishedApp .blankCanvas{padding-top:76px;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+body.publishedApp .blankBottomDock{position:fixed!important;left:18px!important;right:18px!important;bottom:env(safe-area-inset-bottom,0px)!important;z-index:100;background:#f2f2f7;padding:6px 0 10px;margin:0}
+body.publishedApp .blankBottomDock .mobileBottomNav{box-shadow:0 -1px 10px #00000012}
 @media(max-width:1200px){.properties{width:290px}.phone{margin-right:2%}.controls{padding-right:2%}}
 @media(max-width:1100px){.workspace{grid-template-columns:var(--sidebar-width,420px) 8px minmax(0,1fr)}.properties{position:static;width:100%;max-height:none;box-shadow:none}.phone{margin-right:2%}.controls{padding-right:2%}}
 @media(max-width:900px){.workspace{grid-template-columns:1fr}.resizeHandle{display:none}.sidebar{min-height:auto}.previewArea{padding-top:16px;align-items:center}.properties{width:100%}.phone{width:360px;margin:0 auto}.controls{justify-content:center;padding-right:0}}
@@ -549,6 +551,7 @@ function switchPhoneScreen(name){
   if(tab)tab.classList.add('active');
   projectState.activeScreen=name;
   saveProjectState();
+  renderBuilder();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchPhoneScreen(t.dataset.screen)));
 
@@ -1279,7 +1282,10 @@ function renderBuilder(){
   const dock=document.getElementById('blankBottomDock');
   if(dock){
     dock.innerHTML='';
-    const cmp=(projectState.components.NuovaIdea||[]).find(x=>x.type==='bottomnav');
+    const currentScreen=activeScreenName();
+    const cmp=(projectState.components[currentScreen]||[]).find(x=>x.type==='bottomnav')
+      || (projectState.components.NuovaIdea||[]).find(x=>x.type==='bottomnav')
+      || Object.values(projectState.components||{}).flat().find(x=>x.type==='bottomnav');
     if(cmp){
       const wrap=document.createElement('div');
       wrap.className='builderComponent'+(cmp.id===selectedBuilderId?' selectedBuilder':'');
