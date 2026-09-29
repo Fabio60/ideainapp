@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const superTypes = ['appheader','searchresults','dashboard','form','places','navapp'];
   const actionTypes = [
     'toast','show','hide','toggle','setText','navigate','openDrawer',
-    'scrollTo','clear','increment','decrement','saveRecord','showCurrentTime','scheduleReminder'
+    'scrollTo','clear','increment','decrement','saveRecord','showCurrentTime','scheduleReminder','playSound'
   ];
 
   const instructions = `
@@ -45,7 +45,9 @@ Principi:
 - Per "salvalo nell'archivio" usa action_type=saveRecord, target_type=archive e target_label coerente.
 - Per "visualizza l'ora attuale" usa action_type=showCurrentTime, target_type=clock e target_label="Ora attuale".
 - Per "notifica/promemoria all'orario scelto" aggiungi anche action_type=scheduleReminder sulla stessa sorgente.
-- Non dire che archivio o ora attuale non sono disponibili: sono supportati.
+- Per richieste come "riproduci suono", "suona", "fai un beep" o "metti un suono sul pulsante X" usa action_type=playSound sulla sorgente indicata.
+- playSound è supportata e può essere configurata dal pannello Proprietà con tipo, durata e ripetizioni.
+- Non dire che archivio, ora attuale o riproduzione suono non sono disponibili: sono supportati.
 - Le notifiche pianificate nel browser sono una funzione locale e possono dipendere dai permessi e dal fatto che l'app/browser resti attivo; non promettere affidabilità da sistema operativo se non supportata.
 - Per una voce di menu, source_kind deve essere menu_item e source_label deve essere il testo visibile della voce.
 - Se il target richiesto non esiste, usa ensure_target=true e specifica target_type/target_label.
