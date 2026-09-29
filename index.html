@@ -1830,8 +1830,12 @@ function setProjectMode(mode){
 function startNewIdea(){
   projectState.projectMode='blank';
   projectState.components.NuovaIdea=[];
+  projectState.actions={};
+  projectState.archives={reminders:[]};
   projectState.showBlankStart=true;
   projectState.decisions=[];
+  projectState.activeScreen='NuovaIdea';
+  localStorage.removeItem(DELETED_REMINDERS_KEY);
   decisionsList.innerHTML='';
   document.querySelectorAll('.chat .msg').forEach(m=>m.remove());
   setProjectMode('blank');
