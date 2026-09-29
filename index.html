@@ -1044,16 +1044,28 @@ async function chooseImageFile(accept='image/*'){
     const picker=document.createElement('input');
     picker.type='file';
     picker.accept=accept;
+    picker.style.position='fixed';
+    picker.style.left='-9999px';
+    picker.style.top='0';
+    picker.style.opacity='0';
+    picker.style.pointerEvents='none';
+    document.body.appendChild(picker);
+    const cleanup=()=>{try{picker.remove()}catch{}};
     picker.onchange=async()=>{
       const file=picker.files?.[0];
-      if(!file){resolve(null);return}
+      if(!file){cleanup();resolve(null);return}
       try{
         const dataUrl=await fileToOptimizedDataUrl(file);
         window.__ideaLastImageData=dataUrl;
         window.__ideaLastImageName=file.name||'immagine';
+        cleanup();
         resolve({file,dataUrl});
-      }catch{resolve(null)}
+      }catch{
+        cleanup();
+        resolve(null);
+      }
     };
+    picker.addEventListener('cancel',()=>{cleanup();resolve(null)},{once:true});
     picker.click();
   });
 }
@@ -1619,6 +1631,27 @@ function renderBuilder(){
         u.innerHTML='<div style="font-size:26px"></div><div></div>';
         u.firstElementChild.textContent=cmp.hasImage?'✓':'＋';
         u.lastElementChild.textContent=cmp.hasImage?(cmp.fileName||'Foto pronta'):(cmp.text||'Aggiungi foto o file');
+        u.style.cursor='pointer';
+        u.onclick=async e=>{
+          if(!previewMode)return;
+          e.stopPropagation();
+          const raw=projectState.actions[cmp.id]||{};
+          const list=Array.isArray(raw)?raw:[raw];
+          const hasPicker=list.some(x=>x?.type==='pickImage');
+          const hasAnalyze=list.some(x=>x?.type==='analyzeImage');
+          if(hasPicker || hasAnalyze){
+            await executeBuilderActions(raw);
+          }else{
+            const picked=await chooseImageFile('image/*');
+            if(picked){
+              cmp.fileName=picked.file.name||'immagine';
+              cmp.hasImage=true;
+              saveProjectState();
+              renderBuilder();
+              toast('Foto pronta');
+            }
+          }
+        };
         body.appendChild(u);
       }else if(cmp.type==='map'){
         const m=document.createElement('div');m.className='mapPlaceholder';const s=document.createElement('span');s.textContent=cmp.text||'Mappa / posizione';m.appendChild(s);body.appendChild(m);
@@ -1741,6 +1774,7 @@ function renderBuilder(){
       wrap.querySelector('.builderRemove').onclick=e=>{e.stopPropagation();removeBuilderComponent(cmp.id)};
       wrap.onclick=e=>{
         if(e.target.closest('.squareBtn'))return;
+        if(cmp.type==='upload' && e.target.closest('.uploadBox'))return;
         if(previewMode){
           if(cmp.type==='hamburger' || (cmp.type==='header' && cmp.left==='hamburger')){toggleDrawer();return}
           if(cmp.type==='drawer'){return}
