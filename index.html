@@ -56,7 +56,6 @@ body.publishedApp .blankCanvas{padding-bottom:88px}
 @media(max-width:900px){.workspace{grid-template-columns:1fr}.resizeHandle{display:none}.sidebar{min-height:auto}.previewArea{padding-top:16px;align-items:center}.properties{width:100%}.phone{width:360px;margin:0 auto}.controls{justify-content:center;padding-right:0}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -390,23 +389,14 @@ const decisionsList=document.getElementById('decisionsList');
 const toastEl=document.getElementById('toast');
 const featureState={history:false,recipes:false,share:false};
 const PROJECT_KEY='ideainapp_demo_project_v1';
-const APP_PARAM=new URLSearchParams(location.search).get('app');
-const IS_PUBLISHED=!!APP_PARAM;
-function appHash(s){
-  let h=2166136261;
-  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
-  return (h>>>0).toString(36);
-}
-let embeddedProject=null;
-if(IS_PUBLISHED && window.LZString){
-  try{
-    const json=LZString.decompressFromEncodedURIComponent(APP_PARAM);
-    if(json)embeddedProject=JSON.parse(json);
-  }catch(e){console.warn('Invalid published project',e)}
-}
-const RUNTIME_KEY=IS_PUBLISHED?'ideainapp_app_'+appHash(APP_PARAM):PROJECT_KEY;
+const SUPABASE_URL='https://bqdwkxxdkoimqvyuuijz.supabase.co';
+const SUPABASE_KEY='sb_publishable_waNH0xJIs-giJ7YNsXV-sw_t_H_UtS5';
+const pathAppMatch=location.pathname.match(/^\/app\/([A-Za-z0-9_-]{8,20})\/?$/);
+const APP_ID=pathAppMatch?.[1] || new URLSearchParams(location.search).get('app');
+const IS_PUBLISHED=!!APP_ID;
+const RUNTIME_KEY=IS_PUBLISHED?'ideainapp_app_'+APP_ID:PROJECT_KEY;
 const savedRuntime=JSON.parse(localStorage.getItem(RUNTIME_KEY)||'null');
-const projectState=(IS_PUBLISHED?(savedRuntime||embeddedProject||{}):JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}'));
+const projectState=(IS_PUBLISHED?(savedRuntime||{}):JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}'));
 projectState.styles=projectState.styles||{};
 projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
 projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
@@ -415,6 +405,39 @@ projectState.archives=projectState.archives||{reminders:[]};
 projectState.projectMode=projectState.projectMode||'blank';
 projectState.platform=projectState.platform||'ios';
 function saveProjectState(){localStorage.setItem(RUNTIME_KEY,JSON.stringify(projectState))}
+function normalizeProjectState(){
+  projectState.styles=projectState.styles||{};
+  projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
+  projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
+  projectState.actions=projectState.actions||{};
+  projectState.archives=projectState.archives||{reminders:[]};
+  projectState.projectMode=projectState.projectMode||'blank';
+  projectState.platform=projectState.platform||'ios';
+}
+async function loadPublishedAppFromCloud(){
+  if(!IS_PUBLISHED)return false;
+  try{
+    const r=await fetch(SUPABASE_URL+'/rest/v1/ideainapp_published_apps?id=eq.'+encodeURIComponent(APP_ID)+'&select=config',{
+      headers:{apikey:SUPABASE_KEY}
+    });
+    if(!r.ok)throw new Error('load failed');
+    const rows=await r.json();
+    if(!rows?.[0]?.config)throw new Error('app not found');
+    Object.keys(projectState).forEach(k=>delete projectState[k]);
+    Object.assign(projectState,rows[0].config);
+    normalizeProjectState();
+    saveProjectState();
+    renderBuilder();
+    setProjectMode(projectState.projectMode==='example'?'example':'blank');
+    if(projectState.projectMode==='example' && projectState.activeScreen)switchPhoneScreen(projectState.activeScreen);
+    updateLiveClocks();
+    return true;
+  }catch(e){
+    console.error(e);
+    document.body.innerHTML='<main style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:32px;text-align:center"><h2>App non disponibile</h2><p>Il progetto pubblicato non è stato trovato.</p></main>';
+    return false;
+  }
+}
 
 function toast(msg){
   toastEl.textContent=msg;
@@ -1910,13 +1933,14 @@ if(IS_PUBLISHED){
   document.body.classList.add('publishedApp');
   previewMode=true;
   document.querySelector('.phone')?.classList.add('preview-mode');
-  renderBuilder();
-  updateLiveClocks();
   document.title='La mia App';
+  loadPublishedAppFromCloud();
 }
 
 const shareModal=document.getElementById('shareModal');
 const qrBox=document.getElementById('qrBox');
+let lastPublishedUrl='';
+let lastPublishedHash='';
 function publishedSnapshot(){
   return {
     components:projectState.components,
@@ -1927,18 +1951,62 @@ function publishedSnapshot(){
     activeScreen:projectState.activeScreen
   };
 }
-function shareUrl(){
-  const packed=LZString.compressToEncodedURIComponent(JSON.stringify(publishedSnapshot()));
-  return location.origin+location.pathname+'?app='+packed;
+function snapshotHash(snapshot){
+  const s=JSON.stringify(snapshot);
+  let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  return (h>>>0).toString(36);
 }
-function openShare(title='Condividi la tua App'){
+function makeShortId(){
+  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const bytes=new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>alphabet[b%alphabet.length]).join('');
+}
+async function ensurePublished(){
+  const snapshot=publishedSnapshot();
+  const hash=snapshotHash(snapshot);
+  if(lastPublishedUrl && lastPublishedHash===hash)return lastPublishedUrl;
+  for(let attempt=0;attempt<4;attempt++){
+    const id=makeShortId();
+    const r=await fetch(SUPABASE_URL+'/rest/v1/ideainapp_published_apps',{
+      method:'POST',
+      headers:{
+        apikey:SUPABASE_KEY,
+        'Content-Type':'application/json',
+        Prefer:'return=minimal'
+      },
+      body:JSON.stringify({id,config:snapshot})
+    });
+    if(r.ok){
+      lastPublishedUrl=location.origin+'/app/'+id;
+      lastPublishedHash=hash;
+      return lastPublishedUrl;
+    }
+    if(r.status!==409)throw new Error('publish failed');
+  }
+  throw new Error('could not allocate app id');
+}
+async function openShare(title='Condividi la tua App'){
   document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalText').textContent='Pubblicazione in corso…';
   qrBox.innerHTML='';
-  new QRCode(qrBox,{text:shareUrl(),width:190,height:190,correctLevel:QRCode.CorrectLevel.M});
   shareModal.classList.remove('hidden');
+  try{
+    const url=await ensurePublished();
+    new QRCode(qrBox,{text:url,width:190,height:190,correctLevel:QRCode.CorrectLevel.M});
+    document.getElementById('modalText').textContent='Scansiona il QR: apre direttamente l’App sviluppata.';
+  }catch(e){
+    console.error(e);
+    document.getElementById('modalText').textContent='Errore durante la pubblicazione. Riprova.';
+  }
 }
 async function copyLink(){
-  try{await navigator.clipboard.writeText(shareUrl());toast('Link copiato')}catch{toast('Copia il link dalla barra del browser')}
+  try{
+    const url=await ensurePublished();
+    await navigator.clipboard.writeText(url);
+    toast('Link App copiato');
+  }catch{toast('Impossibile creare il link')}
 }
 document.getElementById('topShareBtn').onclick=()=>openShare();
 document.getElementById('showQrBtn').onclick=()=>openShare('QR della tua anteprima');
@@ -1959,10 +2027,9 @@ document.getElementById('previewBtn').onclick=()=>{
     toast('Modalità modifica attiva');
   }
 };
-function generated(){
+async function generated(){
   addDecision('App pronta per la pubblicazione');
-  openShare('La tua App è pronta');
-  document.getElementById('modalText').textContent='Questo QR apre direttamente l’App sviluppata in modalità utente, senza mostrare l’editor IdeaInApp.';
+  await openShare('La tua App è pronta');
 }
 document.getElementById('modeChip').onclick=()=>document.getElementById('previewBtn').click();
 document.getElementById('generateBtn').onclick=generated;
