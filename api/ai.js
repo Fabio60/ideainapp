@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     'openUrl','callPhone','sendEmail','openWhatsApp','share','copyClipboard','setValue',
     'addRecord','updateRecord','deleteRecord','openModal','closeModal','goBack','pickImage',
     'getLocation','openMap','filterList','sortList','confirm','delay','condition','vibrate',
-    'notify','addCalendarEvent','callWebhook','focusField'
+    'notify','addCalendarEvent','callWebhook','focusField','analyzeImage'
   ];
 
   const instructions = `
@@ -55,11 +55,13 @@ Principi:
 - Per "apri un sito/link" usa openUrl; telefono callPhone; email sendEmail; WhatsApp openWhatsApp; condivisione share; copia copyClipboard.
 - Per riempire/svuotare campi usa setValue/clear; per liste o dati usa addRecord/updateRecord/deleteRecord.
 - Per popup usa openModal/closeModal; per indietro goBack; foto/file pickImage; posizione getLocation; mappa openMap.
+- Se l'utente vuole leggere, riconoscere o estrarre dati da una foto/documento/biglietto, usa analyzeImage. Se serve scegliere prima la foto, concatena pickImage e analyzeImage sulla stessa sorgente.
+- Per biglietti da visita usa normalmente fields ["nome","cognome","azienda","ruolo","telefono","email","sito","indirizzo"] in properties_json. Se i campi esistono già, analyzeImage li compilerà automaticamente per corrispondenza di etichetta; puoi anche passare fieldMap in properties_json, per esempio {"fields":["nome","telefono"],"fieldMap":{"nome":"Nome","telefono":"Telefono"},"context":"Biglietto da visita"}.
 - Per ricerca/filtri usa filterList e per ordinamento sortList.
 - Per conferme usa confirm; per ritardi delay; per regole tipo "se... allora..." usa condition.
 - Per vibrazione usa vibrate; notifica immediata notify; calendario addCalendarEvent; servizi esterni/API/webhook callWebhook; per portare il cursore in un campo focusField.
 - Per action avanzate inserisci i parametri extra in properties_json, ad esempio {"operator":"notEmpty"}, {"ms":1000}, {"method":"POST"}.
-- Non dire che queste capacità non sono disponibili: se la richiesta è compatibile con il browser, costruisci la logica necessaria.
+- Non dire che queste capacità non sono disponibili: se la richiesta è compatibile con il browser, costruisci la logica necessaria. L'analisi immagini con IA è supportata tramite analyzeImage.
 - Le notifiche pianificate nel browser sono una funzione locale e possono dipendere dai permessi e dal fatto che l'app/browser resti attivo; non promettere affidabilità da sistema operativo se non supportata.
 - Per una voce di menu, source_kind deve essere menu_item e source_label deve essere il testo visibile della voce.
 - Se il target richiesto non esiste, usa ensure_target=true e specifica target_type/target_label.
