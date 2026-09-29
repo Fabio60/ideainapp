@@ -32,7 +32,7 @@ body.resizing{cursor:col-resize;user-select:none}
 #historySelectionTitle{font-size:15px;line-height:1.15;margin-bottom:8px}.tabbar{display:flex;justify-content:space-around;background:#fff;border-top:1px solid #ddd;padding:12px 6px 16px;margin:12px -18px -18px;flex:0 0 auto}.tab{text-align:center;font-size:12px;color:#777;cursor:pointer}.tab b{display:block;font-size:22px;margin-bottom:2px}.tab.active{color:#34c759}
 .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-right:6%}.ctl{border:1px solid #dfe3e8;background:#fff;border-radius:12px;padding:10px 14px;font-weight:700}.ctl.primary{background:#3478f6;color:#fff;border-color:#3478f6}
 .featureCard{display:none}.featureCard.show{display:block;animation:featureIn .28s ease}.featureCard h3{display:flex;align-items:center;gap:8px}.newBadge{display:inline-block;background:#34c759;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:3px 7px;text-transform:uppercase;letter-spacing:.4px}@keyframes featureIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
-.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.modal.hidden{display:none}.modalBox{width:min(420px,100%);background:#fff;border-radius:22px;padding:20px;box-shadow:0 24px 80px #0005}.modalBox h2{margin:0 0 8px}.modalActions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}.modalActions button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:700}.modalActions .primary{background:#3478f6;color:#fff}.modalActions .secondary{background:#eef0f4;color:#111}.qrBox{display:grid;place-items:center;padding:18px 0}.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#111318;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;z-index:120;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.modal.hidden{display:none}.modalBox{width:min(420px,100%);background:#fff;border-radius:22px;padding:20px;box-shadow:0 24px 80px #0005}.modalBox h2{margin:0 0 8px}.modalActions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}.modalActions button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:700}.modalActions .primary{background:#3478f6;color:#fff}.modalActions .secondary{background:#eef0f4;color:#111}.qrBox{display:grid;place-items:center;padding:18px 0}.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#111318;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;z-index:120;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}.installAppBtn{position:absolute;right:18px;top:18px;z-index:40;border:0;border-radius:999px;background:#111318;color:#fff;padding:10px 14px;font-weight:800;font-size:12px;box-shadow:0 6px 18px #0003;display:none}.publishedApp .installAppBtn{display:block}.installGuide{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;padding:20px;z-index:150}.installGuide.show{display:flex}.installGuideBox{width:min(380px,100%);background:#fff;border-radius:20px;padding:18px;color:#111}.installGuideBox h3{margin:0 0 8px}.installGuideBox p{font-size:14px;line-height:1.4;color:#5d6168}.installGuideBox button{width:100%;border:0;border-radius:12px;background:#3478f6;color:#fff;padding:12px;font-weight:800}
 body.publishedApp{background:#f2f2f7}
 body.publishedApp .topbar,
 body.publishedApp .sidebar,
@@ -380,6 +380,14 @@ body.publishedApp .blankCanvas{padding-top:76px;padding-bottom:88px}
     </div>
   </div>
 </div>
+<button class="installAppBtn" id="installAppBtn" type="button">Aggiungi a Home</button>
+<div class="installGuide" id="installGuide">
+  <div class="installGuideBox">
+    <h3>Aggiungi alla Home</h3>
+    <p id="installGuideText">Apri il menu del browser e scegli “Aggiungi alla schermata Home”.</p>
+    <button id="closeInstallGuideBtn" type="button">Ho capito</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -389,6 +397,38 @@ const chat=document.querySelector('.chat');
 const decisionsList=document.getElementById('decisionsList');
 const toastEl=document.getElementById('toast');
 const featureState={history:false,recipes:false,share:false};
+let deferredInstallPrompt=null;
+function installManifestForCurrentApp(){
+  if(!IS_PUBLISHED)return;
+  const manifest={
+    name:'La mia App',
+    short_name:'La mia App',
+    start_url:location.pathname,
+    scope:'/',
+    display:'standalone',
+    background_color:'#f2f2f7',
+    theme_color:'#111318',
+    icons:[{src:'/app-icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]
+  };
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
+  const link=document.createElement('link');
+  link.rel='manifest';
+  link.href=URL.createObjectURL(blob);
+  document.head.appendChild(link);
+  const apple=document.createElement('link');
+  apple.rel='apple-touch-icon';
+  apple.href='/app-icon.svg';
+  document.head.appendChild(apple);
+  const meta=document.createElement('meta');
+  meta.name='apple-mobile-web-app-capable';
+  meta.content='yes';
+  document.head.appendChild(meta);
+}
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+});
+
 const PROJECT_KEY='ideainapp_demo_project_v1';
 const SUPABASE_URL='https://bqdwkxxdkoimqvyuuijz.supabase.co';
 const SUPABASE_KEY='sb_publishable_waNH0xJIs-giJ7YNsXV-sw_t_H_UtS5';
@@ -1978,6 +2018,8 @@ setProjectMode(projectState.projectMode==='example'?'example':'blank');
 if(projectState.projectMode==='example' && projectState.activeScreen) switchPhoneScreen(projectState.activeScreen);
 if(IS_PUBLISHED){
   document.body.classList.add('publishedApp');
+  installManifestForCurrentApp();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   previewMode=true;
   document.querySelector('.phone')?.classList.add('preview-mode');
   document.title='La mia App';
@@ -2081,6 +2123,28 @@ async function generated(){
 document.getElementById('modeChip').onclick=()=>document.getElementById('previewBtn').click();
 document.getElementById('generateBtn').onclick=generated;
 document.getElementById('publishBtn').onclick=generated;
+
+const installBtn=document.getElementById('installAppBtn');
+const installGuide=document.getElementById('installGuide');
+const installGuideText=document.getElementById('installGuideText');
+if(installBtn){
+  installBtn.onclick=async()=>{
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice.catch(()=>{});
+      deferredInstallPrompt=null;
+      return;
+    }
+    const ua=navigator.userAgent||'';
+    const isiOS=/iPad|iPhone|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    installGuideText.textContent=isiOS
+      ? 'Su iPhone/iPad: tocca Condividi in Safari, poi scegli “Aggiungi alla schermata Home”.'
+      : 'Apri il menu del browser e scegli “Installa app” oppure “Aggiungi alla schermata Home”.';
+    installGuide.classList.add('show');
+  };
+}
+document.getElementById('closeInstallGuideBtn')?.addEventListener('click',()=>installGuide.classList.remove('show'));
+installGuide?.addEventListener('click',e=>{if(e.target===installGuide)installGuide.classList.remove('show')});
 
 const workspace=document.querySelector('.workspace');
 const handle=document.getElementById('resizeHandle');
