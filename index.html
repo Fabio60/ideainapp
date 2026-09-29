@@ -247,6 +247,8 @@ body.publishedApp .blankBottomDock .mobileBottomNav{box-shadow:0 -1px 10px #0000
             <option value="setText">Cambia testo</option>
             <option value="navigate">Vai a schermata</option>
             <option value="openDrawer">Apri / chiudi menu</option>
+            <option value="playSound">Riproduci suono</option>
+            <option value="scheduleReminder">Programma promemoria</option>
           </select>
           <input type="text" id="propActionTarget" placeholder="Target (id o schermata)" style="margin-top:7px">
           <input type="text" id="propActionValue" placeholder="Valore / messaggio" style="margin-top:7px">
@@ -936,6 +938,10 @@ function executeBuilderAction(a){
     saveProjectState();
     renderBuilder();
     updateLiveClocks();
+  }
+  if(a.type==='playSound'){
+    armReminderSound();
+    playReminderSound();
   }
   if(a.type==='scheduleReminder'){
     const list=projectState.archives?.reminders||[];
