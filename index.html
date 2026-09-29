@@ -2153,6 +2153,19 @@ document.getElementById('publishBtn').onclick=generated;
 const installBtn=document.getElementById('installAppBtn');
 const installGuide=document.getElementById('installGuide');
 const installGuideText=document.getElementById('installGuideText');
+function isStandaloneApp(){
+  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+function syncInstallButton(){
+  if(!installBtn)return;
+  installBtn.style.display=(IS_PUBLISHED && !isStandaloneApp())?'block':'none';
+}
+syncInstallButton();
+window.matchMedia?.('(display-mode: standalone)').addEventListener?.('change',syncInstallButton);
+window.addEventListener('appinstalled',()=>{
+  deferredInstallPrompt=null;
+  syncInstallButton();
+});
 if(installBtn){
   installBtn.onclick=async()=>{
     if(deferredInstallPrompt){
