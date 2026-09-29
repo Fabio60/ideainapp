@@ -739,37 +739,95 @@ function collectReminderRecord(){
   return record;
 }
 let reminderAudioCtx=null;
-function armReminderSound(){
+let reminderAudioEl=null;
+let reminderAudioUrl=null;
+
+function buildReminderWavUrl(){
+  if(reminderAudioUrl)return reminderAudioUrl;
+  const sampleRate=22050;
+  const duration=1.4;
+  const total=Math.floor(sampleRate*duration);
+  const buffer=new ArrayBuffer(44+total*2);
+  const view=new DataView(buffer);
+  const writeStr=(o,s)=>{for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i))};
+  writeStr(0,'RIFF'); view.setUint32(4,36+total*2,true); writeStr(8,'WAVE');
+  writeStr(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,1,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*2,true); view.setUint16(32,2,true); view.setUint16(34,16,true);
+  writeStr(36,'data'); view.setUint32(40,total*2,true);
+  for(let i=0;i<total;i++){
+    const t=i/sampleRate;
+    const gate=((t%0.32)<0.20)?1:0;
+    const freq=t<0.7?880:1175;
+    const env=Math.min(1,t*18)*Math.min(1,(duration-t)*12);
+    const s=Math.sin(2*Math.PI*freq*t)*0.42*gate*env;
+    view.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true);
+  }
+  reminderAudioUrl=URL.createObjectURL(new Blob([buffer],{type:'audio/wav'}));
+  return reminderAudioUrl;
+}
+
+async function armReminderSound(){
   try{
     const AudioCtx=window.AudioContext||window.webkitAudioContext;
-    if(!AudioCtx)return;
-    reminderAudioCtx=reminderAudioCtx||new AudioCtx();
-    if(reminderAudioCtx.state==='suspended')reminderAudioCtx.resume();
+    if(AudioCtx){
+      reminderAudioCtx=reminderAudioCtx||new AudioCtx();
+      if(reminderAudioCtx.state==='suspended')await reminderAudioCtx.resume();
+    }
+    if(!reminderAudioEl){
+      reminderAudioEl=new Audio(buildReminderWavUrl());
+      reminderAudioEl.preload='auto';
+      reminderAudioEl.volume=1;
+      reminderAudioEl.playsInline=true;
+    }
+    // Sblocca l'audio iOS durante un gesto dell'utente.
+    reminderAudioEl.muted=true;
+    const p=reminderAudioEl.play();
+    if(p?.then)await p.catch(()=>{});
+    reminderAudioEl.pause();
+    reminderAudioEl.currentTime=0;
+    reminderAudioEl.muted=false;
   }catch(e){}
 }
-function playReminderSound(){
+
+async function playReminderSound(){
+  let played=false;
   try{
-    armReminderSound();
-    if(!reminderAudioCtx)return;
-    const now=reminderAudioCtx.currentTime;
-    const notes=[880,988,1175,988,880];
-    notes.forEach((freq,idx)=>{
-      const osc=reminderAudioCtx.createOscillator();
-      const gain=reminderAudioCtx.createGain();
-      osc.type='sine';
-      osc.frequency.value=freq;
-      gain.gain.setValueAtTime(0.0001,now+idx*0.28);
-      gain.gain.exponentialRampToValueAtTime(0.22,now+idx*0.28+0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001,now+idx*0.28+0.24);
-      osc.connect(gain).connect(reminderAudioCtx.destination);
-      osc.start(now+idx*0.28);
-      osc.stop(now+idx*0.28+0.26);
-    });
-    if(navigator.vibrate)navigator.vibrate([250,120,250]);
+    if(reminderAudioEl){
+      reminderAudioEl.pause();
+      reminderAudioEl.currentTime=0;
+      reminderAudioEl.muted=false;
+      reminderAudioEl.volume=1;
+      await reminderAudioEl.play();
+      played=true;
+    }
   }catch(e){}
+  try{
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!reminderAudioCtx && AudioCtx)reminderAudioCtx=new AudioCtx();
+    if(reminderAudioCtx){
+      if(reminderAudioCtx.state==='suspended')await reminderAudioCtx.resume().catch(()=>{});
+      const now=reminderAudioCtx.currentTime;
+      [880,988,1175,988,880].forEach((freq,idx)=>{
+        const osc=reminderAudioCtx.createOscillator();
+        const gain=reminderAudioCtx.createGain();
+        osc.type='sine'; osc.frequency.value=freq;
+        gain.gain.setValueAtTime(0.0001,now+idx*0.28);
+        gain.gain.exponentialRampToValueAtTime(0.25,now+idx*0.28+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001,now+idx*0.28+0.24);
+        osc.connect(gain).connect(reminderAudioCtx.destination);
+        osc.start(now+idx*0.28); osc.stop(now+idx*0.28+0.26);
+      });
+      played=true;
+    }
+  }catch(e){}
+  if(navigator.vibrate)navigator.vibrate([300,120,300,120,300]);
+  return played;
 }
-document.addEventListener('pointerdown',armReminderSound,{once:true,capture:true});
-document.addEventListener('keydown',armReminderSound,{once:true,capture:true});
+
+document.addEventListener('pointerdown',armReminderSound,{capture:true});
+document.addEventListener('touchend',armReminderSound,{capture:true});
+document.addEventListener('keydown',armReminderSound,{capture:true});
 
 function scheduleLocalReminder(record){
   const when=(record.reminderDate?record.reminderDate:new Date().toISOString().slice(0,10))+'T'+(record.reminderTime||'');
@@ -850,6 +908,7 @@ function executeBuilderAction(a){
     }
   }
   if(a.type==='saveRecord'){
+    armReminderSound();
     const record=collectReminderRecord();
     projectState.archives.reminders=projectState.archives.reminders||[];
     projectState.archives.reminders.push(record);
