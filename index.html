@@ -464,24 +464,6 @@ function normalizeProjectState(){
     }
   }
 
-  // Migrazione app promemoria già create: se c'è un campo orario e un archivio
-  // ma manca l'orologio live, aggiungilo in fondo alla schermata.
-  for(const screen of Object.keys(projectState.components||{})){
-    const list=projectState.components[screen]||[];
-    const hasReminderTime=list.some(c=>c.type==='time');
-    const hasArchive=list.some(c=>c.type==='archive');
-    const hasClock=list.some(c=>c.type==='clock');
-    if(hasReminderTime && hasArchive && !hasClock){
-      list.push({
-        id:'cmp_clock_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-        type:'clock',
-        label:'Ora attuale',
-        text:'Ora attuale',
-        visible:true,
-        style:{width:'100%',textAlign:'center',fontSize:'24px',fontWeight:'700'}
-      });
-    }
-  }
 }
 normalizeProjectState();
 function clearActionEntryOnStartup(){
