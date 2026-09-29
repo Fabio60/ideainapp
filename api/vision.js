@@ -38,6 +38,9 @@ export default async function handler(req, res) {
     'Non inventare informazioni mancanti.',
     'Se un campo non è leggibile o non è presente, restituisci null.',
     'Mantieni telefono, email, URL e indirizzi nel formato più fedele possibile.',
+    'Per i nomi di persona distingui con attenzione NOME e COGNOME: non duplicare lo stesso valore nei due campi.',
+    'Su un biglietto italiano con una riga come "FRANCESCO ROSSI", restituisci nome="Francesco" e cognome="Rossi".',
+    'Se è presente un solo nome completo, separalo semanticamente in nome e cognome; se non sei sicuro, lascia null il campo incerto invece di duplicare.',
     context ? 'Contesto: ' + String(context).slice(0, 500) : ''
   ].filter(Boolean).join('\n');
 
@@ -90,7 +93,16 @@ export default async function handler(req, res) {
       return;
     }
 
-    res.status(200).json({ data: JSON.parse(outputText) });
+    const data = JSON.parse(outputText);
+    if (typeof data.nome === 'string' && typeof data.cognome === 'string') {
+      const nome = data.nome.trim();
+      const cognome = data.cognome.trim();
+      if (nome && cognome && nome.toLocaleLowerCase('it-IT') === cognome.toLocaleLowerCase('it-IT')) {
+        // Never propagate the same token into both semantic fields.
+        data.nome = null;
+      }
+    }
+    res.status(200).json({ data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'VISION_INTERNAL_ERROR', detail: String(err?.message || err) });
