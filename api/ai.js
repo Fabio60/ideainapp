@@ -25,7 +25,11 @@ export default async function handler(req, res) {
   const superTypes = ['appheader','searchresults','dashboard','form','places','navapp'];
   const actionTypes = [
     'toast','show','hide','toggle','setText','navigate','openDrawer',
-    'scrollTo','clear','increment','decrement','saveRecord','showCurrentTime','scheduleReminder','playSound'
+    'scrollTo','clear','increment','decrement','saveRecord','showCurrentTime','scheduleReminder','playSound',
+    'openUrl','callPhone','sendEmail','openWhatsApp','share','copyClipboard','setValue',
+    'addRecord','updateRecord','deleteRecord','openModal','closeModal','goBack','pickImage',
+    'getLocation','openMap','filterList','sortList','confirm','delay','condition','vibrate',
+    'notify','addCalendarEvent','callWebhook','focusField'
   ];
 
   const instructions = `
@@ -47,7 +51,15 @@ Principi:
 - Per "notifica/promemoria all'orario scelto" aggiungi anche action_type=scheduleReminder sulla stessa sorgente.
 - Per richieste come "riproduci suono", "suona", "fai un beep" o "metti un suono sul pulsante X" usa action_type=playSound sulla sorgente indicata.
 - playSound è supportata e può essere configurata dal pannello Proprietà con tipo, durata e ripetizioni.
-- Non dire che archivio, ora attuale o riproduzione suono non sono disponibili: sono supportati.
+- L'utente NON deve conoscere i nomi delle action: interpreta il problema descritto e scegli autonomamente le action necessarie.
+- Per "apri un sito/link" usa openUrl; telefono callPhone; email sendEmail; WhatsApp openWhatsApp; condivisione share; copia copyClipboard.
+- Per riempire/svuotare campi usa setValue/clear; per liste o dati usa addRecord/updateRecord/deleteRecord.
+- Per popup usa openModal/closeModal; per indietro goBack; foto/file pickImage; posizione getLocation; mappa openMap.
+- Per ricerca/filtri usa filterList e per ordinamento sortList.
+- Per conferme usa confirm; per ritardi delay; per regole tipo "se... allora..." usa condition.
+- Per vibrazione usa vibrate; notifica immediata notify; calendario addCalendarEvent; servizi esterni/API/webhook callWebhook; per portare il cursore in un campo focusField.
+- Per action avanzate inserisci i parametri extra in properties_json, ad esempio {"operator":"notEmpty"}, {"ms":1000}, {"method":"POST"}.
+- Non dire che queste capacità non sono disponibili: se la richiesta è compatibile con il browser, costruisci la logica necessaria.
 - Le notifiche pianificate nel browser sono una funzione locale e possono dipendere dai permessi e dal fatto che l'app/browser resti attivo; non promettere affidabilità da sistema operativo se non supportata.
 - Per una voce di menu, source_kind deve essere menu_item e source_label deve essere il testo visibile della voce.
 - Se il target richiesto non esiste, usa ensure_target=true e specifica target_type/target_label.
