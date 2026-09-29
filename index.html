@@ -542,8 +542,12 @@ function normalizeProjectState(){
       ];
       const businessFields=[];
       for(const [label,placeholder] of wanted){
-        let cmp=list.find(x=>['input','textarea'].includes(x.type) &&
-          ((x.label||'')+' '+(x.placeholder||'')).toLowerCase().includes(label.toLowerCase()));
+        let cmp=list.find(x=>{
+          if(!['input','textarea'].includes(x.type))return false;
+          const parts=[x.label,x.placeholder,x.text,x.title].filter(Boolean).map(normalizeFieldName);
+          const wanted=normalizeFieldName(label);
+          return parts.some(p=>p===wanted);
+        });
         if(!cmp){
           cmp=componentDefaults('input');
           cmp.label=label;
@@ -1082,9 +1086,12 @@ function findFieldForExtractedKey(key,explicitLabel=''){
       const hay=normalizeFieldName([cmp.label,cmp.placeholder,cmp.text,cmp.title].filter(Boolean).join(' '));
       if(!hay)continue;
       let score=0;
+      const hayTokens=new Set(hay.split(/\s+/).filter(Boolean));
       for(const alias of aliases){
-        if(hay===alias)score=Math.max(score,100);
-        else if(hay.includes(alias)||alias.includes(hay))score=Math.max(score,70);
+        const a=normalizeFieldName(alias);
+        if(hay===a)score=Math.max(score,100);
+        else if(hayTokens.has(a))score=Math.max(score,85);
+        else if(a.includes(' ') && hay.includes(a))score=Math.max(score,75);
       }
       if(score>bestScore){best={cmp,screen};bestScore=score}
     }
@@ -1406,12 +1413,14 @@ async function executeBuilderAction(a){
       const data=out.data||{};
       const fieldMap=(a.fieldMap&&typeof a.fieldMap==='object')?a.fieldMap:{};
       let filled=0;
+      const usedComponents=new Set();
       for(const [key,value] of Object.entries(data)){
         if(value===null || value===undefined || String(value).trim()==='')continue;
         const cmp=findFieldForExtractedKey(key,fieldMap[key]||'');
-        if(!cmp)continue;
+        if(!cmp || usedComponents.has(cmp.id))continue;
         if(['input','textarea','select'].includes(cmp.type))cmp.value=String(value);
         else if(cmp.type==='text')cmp.text=String(value);
+        usedComponents.add(cmp.id);
         filled++;
       }
       saveProjectState();
