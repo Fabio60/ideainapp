@@ -449,7 +449,22 @@ function normalizeProjectState(){
   projectState.archives=projectState.archives||{reminders:[]};
   projectState.projectMode=projectState.projectMode||'blank';
   projectState.platform=projectState.platform||'ios';
+
+  // Compatibilità con i progetti già creati:
+  // se "Ora attuale" era stata generata come campo time, trasformala in orologio live.
+  for(const screen of Object.keys(projectState.components||{})){
+    for(const cmp of (projectState.components[screen]||[])){
+      const name=((cmp.label||'')+' '+(cmp.text||'')+' '+(cmp.placeholder||'')).toLowerCase();
+      if(cmp.type==='time' && (name.includes('ora attuale') || name.includes('orologio attuale'))){
+        cmp.type='clock';
+        cmp.label=cmp.label||'Ora attuale';
+        delete cmp.value;
+        delete cmp.mode;
+      }
+    }
+  }
 }
+normalizeProjectState();
 function clearActionEntryOnStartup(){
   for(const screen of Object.keys(projectState.components||{})){
     for(const cmp of (projectState.components[screen]||[])){
@@ -691,10 +706,25 @@ function currentTimeClock(){
   return new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
 }
 function updateLiveClocks(){
-  document.querySelectorAll('[data-live-clock="1"]').forEach(el=>el.textContent=currentTimeClock());
+  const now=currentTimeClock();
+  document.querySelectorAll('[data-live-clock="1"]').forEach(el=>el.textContent=now);
 }
-if(!window.__ideaClockTimer)window.__ideaClockTimer=setInterval(updateLiveClocks,1000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateLiveClocks()});
+function startLiveClock(){
+  if(window.__ideaClockTimer)clearTimeout(window.__ideaClockTimer);
+  updateLiveClocks();
+  const delay=1000-(Date.now()%1000)+15;
+  window.__ideaClockTimer=setTimeout(()=>{
+    updateLiveClocks();
+    window.__ideaClockInterval=setInterval(updateLiveClocks,1000);
+  },delay);
+}
+startLiveClock();
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden){
+    if(window.__ideaClockInterval)clearInterval(window.__ideaClockInterval);
+    startLiveClock();
+  }
+});
 
 function collectReminderRecord(){
   const record={id:'rem_'+Date.now(),createdAt:new Date().toISOString(),createdTime:currentTimeHHMM()};
