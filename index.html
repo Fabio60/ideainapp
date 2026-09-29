@@ -249,6 +249,32 @@ body.publishedApp .blankBottomDock .mobileBottomNav{box-shadow:0 -1px 10px #0000
             <option value="openDrawer">Apri / chiudi menu</option>
             <option value="playSound">Riproduci suono</option>
             <option value="scheduleReminder">Programma promemoria</option>
+            <option value="openUrl">Apri link / sito</option>
+            <option value="callPhone">Chiama numero</option>
+            <option value="sendEmail">Invia email</option>
+            <option value="openWhatsApp">Apri WhatsApp</option>
+            <option value="share">Condividi</option>
+            <option value="copyClipboard">Copia negli appunti</option>
+            <option value="setValue">Imposta valore</option>
+            <option value="addRecord">Aggiungi elemento / record</option>
+            <option value="updateRecord">Modifica elemento / record</option>
+            <option value="deleteRecord">Elimina elemento / record</option>
+            <option value="openModal">Apri popup</option>
+            <option value="closeModal">Chiudi popup</option>
+            <option value="goBack">Indietro</option>
+            <option value="pickImage">Scegli foto / file</option>
+            <option value="getLocation">Ottieni posizione</option>
+            <option value="openMap">Apri mappa</option>
+            <option value="filterList">Filtra lista</option>
+            <option value="sortList">Ordina lista</option>
+            <option value="confirm">Chiedi conferma</option>
+            <option value="delay">Attendi</option>
+            <option value="condition">Esegui se...</option>
+            <option value="vibrate">Vibra</option>
+            <option value="notify">Mostra notifica</option>
+            <option value="addCalendarEvent">Aggiungi al calendario</option>
+            <option value="callWebhook">Chiama servizio esterno</option>
+            <option value="focusField">Vai al campo</option>
           </select>
           <input type="text" id="propActionTarget" placeholder="Target (id o schermata)" style="margin-top:7px">
           <input type="text" id="propActionValue" placeholder="Valore / messaggio" style="margin-top:7px">
@@ -912,13 +938,61 @@ function scheduleLocalReminder(record,soundSettings={}){
     }
   },delay);
 }
-function executeBuilderActions(actions){
+async function executeBuilderActions(actions){
   const list=Array.isArray(actions)?actions:[actions];
-  for(const action of list)executeBuilderAction(action);
+  for(const action of list)await executeBuilderAction(action);
 }
 
-function executeBuilderAction(a){
+function actionFieldValue(target){
+  const found=target?findBuilderComponent(target):null;
+  if(found && found.cmp && 'value' in found.cmp)return found.cmp.value;
+  return '';
+}
+function firstFilledFieldValue(){
+  for(const screen of Object.keys(projectState.components||{})){
+    for(const cmp of (projectState.components[screen]||[])){
+      if(['input','textarea','date','time','select','search'].includes(cmp.type) && String(cmp.value||'').trim())return String(cmp.value).trim();
+    }
+  }
+  return '';
+}
+function normalizeExternalUrl(v){
+  const s=String(v||'').trim();
+  if(!s)return '';
+  if(/^https?:\/\//i.test(s))return s;
+  return 'https://'+s;
+}
+
+async function executeBuilderAction(a){
   if(!a)return;
+
+  if(a.type==='delay'){
+    const ms=Math.max(0,Math.min(60000,Number(a.ms ?? a.value ?? 0)));
+    if(ms)await new Promise(r=>setTimeout(r,ms));
+    return;
+  }
+
+  if(a.type==='confirm'){
+    const ok=window.confirm(a.value||'Confermi?');
+    if(!ok)return;
+    if(a.nextAction)await executeBuilderActions(a.nextAction);
+    return;
+  }
+
+  if(a.type==='condition'){
+    const current=String(actionFieldValue(a.target)||'').trim();
+    const expected=String(a.equals ?? a.value ?? '').trim();
+    const op=a.operator||'notEmpty';
+    const pass=op==='empty'?!current
+      : op==='equals'?current===expected
+      : op==='notEquals'?current!==expected
+      : op==='contains'?current.toLowerCase().includes(expected.toLowerCase())
+      : !!current;
+    if(pass && a.thenAction)await executeBuilderActions(a.thenAction);
+    if(!pass && a.elseAction)await executeBuilderActions(a.elseAction);
+    return;
+  }
+
   if(a.type==='toast' && a.value)toast(a.value);
 
   if(['show','hide','toggle'].includes(a.type) && a.target){
@@ -947,26 +1021,41 @@ function executeBuilderAction(a){
   }
 
   if(a.type==='setText' && a.target){
-    const target=document.querySelector('[data-builder-id="'+a.target+'"]');
-    if(target){
-      const bodyEl=target.querySelector('.builderBody');
-      if(bodyEl)bodyEl.textContent=a.value||'';
+    const found=findBuilderComponent(a.target);
+    if(found){
+      if('text' in found.cmp)found.cmp.text=a.value||'';
+      if('title' in found.cmp)found.cmp.title=a.value||'';
+      saveProjectState();renderBuilder();
+    }
+  }
+
+  if(a.type==='setValue' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found){
+      found.cmp.value=a.value??'';
+      saveProjectState();renderBuilder();
     }
   }
 
   if(a.type==='scrollTo' && a.target){
-    const target=document.querySelector('[data-builder-id="'+a.target+'"]');
-    target?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    document.querySelector('[data-builder-id="'+a.target+'"]')?.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
+
+  if(a.type==='focusField' && a.target){
+    const el=document.querySelector('[data-builder-id="'+a.target+'"] input,[data-builder-id="'+a.target+'"] textarea,[data-builder-id="'+a.target+'"] select');
+    el?.focus();
+  }
+
   if(a.type==='clear' && a.target){
     const found=findBuilderComponent(a.target);
     if(found){
       if('text' in found.cmp)found.cmp.text='';
-      if('value' in found.cmp)found.cmp.value=0;
+      if('value' in found.cmp)found.cmp.value='';
       if(Array.isArray(found.cmp.items))found.cmp.items=[];
       saveProjectState();renderBuilder();
     }
   }
+
   if((a.type==='increment'||a.type==='decrement') && a.target){
     const found=findBuilderComponent(a.target);
     if(found){
@@ -974,6 +1063,34 @@ function executeBuilderAction(a){
       saveProjectState();renderBuilder();
     }
   }
+
+  if(a.type==='addRecord'){
+    const found=a.target?findBuilderComponent(a.target):null;
+    const value=String(a.value||firstFilledFieldValue()||'Nuovo elemento');
+    if(found?.cmp && Array.isArray(found.cmp.items)){
+      found.cmp.items.push(value);
+      saveProjectState();renderBuilder();
+    }
+  }
+
+  if(a.type==='updateRecord' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found?.cmp && Array.isArray(found.cmp.items) && found.cmp.items.length){
+      const idx=Number.isInteger(a.index)?a.index:found.cmp.items.length-1;
+      if(found.cmp.items[idx]!==undefined)found.cmp.items[idx]=String(a.value||found.cmp.items[idx]);
+      saveProjectState();renderBuilder();
+    }
+  }
+
+  if(a.type==='deleteRecord' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found?.cmp && Array.isArray(found.cmp.items) && found.cmp.items.length){
+      const idx=Number.isInteger(a.index)?a.index:found.cmp.items.length-1;
+      found.cmp.items.splice(Math.max(0,idx),1);
+      saveProjectState();renderBuilder();
+    }
+  }
+
   if(a.type==='saveRecord'){
     armReminderSound();
     const record=collectReminderRecord();
@@ -993,6 +1110,7 @@ function executeBuilderAction(a){
     renderBuilder();
     toast('Promemoria salvato');
   }
+
   if(a.type==='showCurrentTime'){
     let found=a.target?findBuilderComponent(a.target):null;
     if(!found){
@@ -1005,14 +1123,118 @@ function executeBuilderAction(a){
     renderBuilder();
     updateLiveClocks();
   }
+
   if(a.type==='playSound'){
     armReminderSound();
     playReminderSound(a);
   }
+
   if(a.type==='scheduleReminder'){
     const list=projectState.archives?.reminders||[];
     if(list.length)scheduleLocalReminder(list[list.length-1],a);
   }
+
+  if(a.type==='openUrl'){
+    const url=normalizeExternalUrl(a.value);
+    if(url)window.open(url,'_blank','noopener');
+  }
+  if(a.type==='callPhone' && a.value)location.href='tel:'+String(a.value).replace(/[^+\d]/g,'');
+  if(a.type==='sendEmail' && a.value)location.href='mailto:'+String(a.value).trim();
+  if(a.type==='openWhatsApp' && a.value){
+    const raw=String(a.value).trim();
+    if(/^https?:\/\//i.test(raw))window.open(raw,'_blank','noopener');
+    else window.open('https://wa.me/'+raw.replace(/\D/g,''),'_blank','noopener');
+  }
+  if(a.type==='share'){
+    const payload={title:a.title||document.title,text:a.value||'',url:a.url||location.href};
+    if(navigator.share)await navigator.share(payload).catch(()=>{});
+    else if(navigator.clipboard){await navigator.clipboard.writeText(payload.url);toast('Link copiato')}
+  }
+  if(a.type==='copyClipboard'){
+    const value=a.value || actionFieldValue(a.target);
+    if(navigator.clipboard){await navigator.clipboard.writeText(String(value||''));toast('Copiato')}
+  }
+  if(a.type==='vibrate' && navigator.vibrate){
+    navigator.vibrate(Number(a.value)||180);
+  }
+  if(a.type==='notify'){
+    const text=a.value||'Notifica';
+    if('Notification' in window){
+      if(Notification.permission==='default')await Notification.requestPermission().catch(()=>{});
+      if(Notification.permission==='granted')new Notification(text);
+      else toast(text);
+    }else toast(text);
+  }
+  if(a.type==='goBack')history.back();
+
+  if(a.type==='openModal' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found){found.cmp.visible=true;saveProjectState();renderBuilder()}
+  }
+  if(a.type==='closeModal' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found){found.cmp.visible=false;saveProjectState();renderBuilder()}
+  }
+
+  if(a.type==='pickImage'){
+    const picker=document.createElement('input');
+    picker.type='file';
+    picker.accept=a.accept||'image/*';
+    picker.onchange=()=>{
+      const file=picker.files?.[0];
+      if(file)toast('Selezionato: '+file.name);
+    };
+    picker.click();
+  }
+
+  if(a.type==='getLocation'){
+    if(!navigator.geolocation){toast('Posizione non disponibile')}
+    else navigator.geolocation.getCurrentPosition(pos=>{
+      const value=pos.coords.latitude.toFixed(6)+','+pos.coords.longitude.toFixed(6);
+      if(a.target){
+        const found=findBuilderComponent(a.target);
+        if(found){found.cmp.value=value;saveProjectState();renderBuilder()}
+      }else toast(value);
+    },()=>toast('Impossibile ottenere la posizione'));
+  }
+
+  if(a.type==='openMap'){
+    const q=encodeURIComponent(a.value||actionFieldValue(a.target)||'');
+    if(q)window.open('https://www.google.com/maps/search/?api=1&query='+q,'_blank','noopener');
+  }
+
+  if(a.type==='filterList' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found?.cmp && Array.isArray(found.cmp.items)){
+      const term=String(a.value||'').toLowerCase();
+      found.cmp._allItems=found.cmp._allItems||found.cmp.items.slice();
+      found.cmp.items=found.cmp._allItems.filter(x=>String(x).toLowerCase().includes(term));
+      renderBuilder();
+    }
+  }
+
+  if(a.type==='sortList' && a.target){
+    const found=findBuilderComponent(a.target);
+    if(found?.cmp && Array.isArray(found.cmp.items)){
+      found.cmp.items.sort((x,y)=>String(x).localeCompare(String(y),'it',{numeric:true}));
+      if(a.value==='desc')found.cmp.items.reverse();
+      saveProjectState();renderBuilder();
+    }
+  }
+
+  if(a.type==='addCalendarEvent'){
+    const text=encodeURIComponent(a.value||'Evento');
+    window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text='+text,'_blank','noopener');
+  }
+
+  if(a.type==='callWebhook' && a.value){
+    const url=normalizeExternalUrl(a.value);
+    try{
+      await fetch(url,{method:a.method||'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(a.body||{})});
+      toast('Operazione completata');
+    }catch{toast('Servizio non raggiungibile')}
+  }
+
   if(a.type==='navigate' && a.target && projectState.projectMode==='example')switchPhoneScreen(a.target);
   if(a.type==='openDrawer')toggleDrawer();
 }
@@ -1725,10 +1947,12 @@ function applyAIPlan(plan){
         if(op.target_type==='clock')target.visible=true;
       }
 
+      const actionProps=safePropertiesJson(op.properties_json);
       const nextAction={
         type:op.action_type,
         target:target?.id || op.target_label || '',
-        value:op.value||''
+        value:op.value||'',
+        ...actionProps
       };
       const existing=projectState.actions[source.key];
       if(existing){
