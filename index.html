@@ -1985,10 +1985,30 @@ function applyAIPlan(plan){
       const cmp=findComponentByAI(op.source_label,op.component_type);
       if(cmp){removeBuilderComponent(cmp.id);done.push('rimuovi '+(op.source_label||cmp.type))}
     }
+
+    if(op.op==='clear_screen'){
+      const screen=activeScreenName();
+      const ids=(projectState.components[screen]||[]).map(x=>x.id);
+      projectState.components[screen]=[];
+      const nextActions={};
+      for(const [key,val] of Object.entries(projectState.actions||{})){
+        const belongs=ids.some(id=>key===id || key.startsWith(id+':'));
+        if(!belongs)nextActions[key]=val;
+      }
+      projectState.actions=nextActions;
+      selectedBuilderId=null;
+      selectedBuilderItemIndex=null;
+      propertiesPanel.classList.remove('show');
+      done.push('schermata svuotata');
+    }
   }
 
   saveProjectState();
   renderBuilder();
+  requestAnimationFrame(()=>{
+    renderBuilder();
+    document.getElementById('blankCanvas')?.scrollTo({top:0,left:0});
+  });
   return done;
 }
 async function askIdeaInAppAI(message){
@@ -2037,6 +2057,22 @@ function applyRequest(raw){
     activated.push(n+' '+label);
   };
   const radioMatch=normalized.match(/(?:aggiungi|crea).*?(\d+)\s*(?:pallini|radio|opzioni)/);
+  if(/^(?:cancella|elimina|rimuovi|svuota)\s+(?:tutto|tutti|ogni cosa)|^(?:cancella|elimina|rimuovi|svuota)\s+la\s+schermata/.test(normalized.trim())){
+    const screen=activeScreenName();
+    const ids=(projectState.components[screen]||[]).map(x=>x.id);
+    projectState.components[screen]=[];
+    const kept={};
+    for(const [key,val] of Object.entries(projectState.actions||{})){
+      if(!ids.some(id=>key===id || key.startsWith(id+':')))kept[key]=val;
+    }
+    projectState.actions=kept;
+    selectedBuilderId=null;
+    selectedBuilderItemIndex=null;
+    propertiesPanel.classList.remove('show');
+    saveProjectState();
+    renderBuilder();
+    activated.push('schermata svuotata');
+  }
 
   const bindMenuMatch=normalized.match(/quando\s+(?:selezioni|premi|tocchi|clicchi)\s+["“”']?([^"“”']+?)["“”']?\s+(?:apri|mostra)\s+(?:la\s+)?lista(?:\s+(.+))?$/);
   if(bindMenuMatch){
