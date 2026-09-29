@@ -252,6 +252,31 @@ body.publishedApp .blankBottomDock .mobileBottomNav{box-shadow:0 -1px 10px #0000
           </select>
           <input type="text" id="propActionTarget" placeholder="Target (id o schermata)" style="margin-top:7px">
           <input type="text" id="propActionValue" placeholder="Valore / messaggio" style="margin-top:7px">
+          <div id="soundActionProps" style="display:none;margin-top:10px;padding:10px;border:1px solid #e2e5ea;border-radius:12px;background:#f8f9fb">
+            <div style="font-weight:800;font-size:12px;margin-bottom:8px">Proprietà suono</div>
+            <label style="font-size:11px;color:#6e6e73">Tipo</label>
+            <select id="propSoundType" style="width:100%;margin-top:4px">
+              <option value="beep">Beep</option>
+              <option value="soft">Soft</option>
+              <option value="alert">Alert</option>
+              <option value="low">Tono basso</option>
+            </select>
+            <label style="font-size:11px;color:#6e6e73;display:block;margin-top:8px">Durata</label>
+            <select id="propSoundDuration" style="width:100%;margin-top:4px">
+              <option value="0.2">Molto breve · 0,2 s</option>
+              <option value="0.35">Breve · 0,35 s</option>
+              <option value="0.7">Media · 0,7 s</option>
+              <option value="1.2">Lunga · 1,2 s</option>
+            </select>
+            <label style="font-size:11px;color:#6e6e73;display:block;margin-top:8px">Ripetizioni</label>
+            <select id="propSoundRepeat" style="width:100%;margin-top:4px">
+              <option value="1">1 volta</option>
+              <option value="2">2 volte</option>
+              <option value="3">3 volte</option>
+              <option value="5">5 volte</option>
+            </select>
+            <button type="button" id="testSoundBtn" class="secondary" style="width:100%;margin-top:10px">Prova suono</button>
+          </div>
         </div>
       </div>
     </section>
@@ -603,6 +628,10 @@ function populateBuilderProperties(cmp, visual){
   propActionType.value=a.type||'';
   propActionTarget.value=a.target||'';
   propActionValue.value=a.value||'';
+  propSoundType.value=a.soundType||'beep';
+  propSoundDuration.value=String(a.soundDuration??0.35);
+  propSoundRepeat.value=String(a.soundRepeat??1);
+  syncSoundActionProps();
 }
 function activeScreenName(){
   if(projectState.projectMode==='blank') return 'NuovaIdea';
@@ -744,11 +773,21 @@ let reminderAudioCtx=null;
 let reminderAudioEl=null;
 let reminderAudioUrl=null;
 
-function buildReminderWavUrl(){
-  if(reminderAudioUrl)return reminderAudioUrl;
+function soundPreset(type){
+  if(type==='soft')return{freq:660,wave:'sine',gain:0.18};
+  if(type==='alert')return{freq:1320,wave:'square',gain:0.12};
+  if(type==='low')return{freq:440,wave:'sine',gain:0.22};
+  return{freq:988,wave:'sine',gain:0.22};
+}
+function buildReminderWavUrl(opts={}){
+  const type=opts.soundType||'beep';
+  const duration=Math.max(0.12,Math.min(2,Number(opts.soundDuration||0.35)));
+  const repeat=Math.max(1,Math.min(8,Number(opts.soundRepeat||1)));
+  const preset=soundPreset(type);
+  const gap=0.12;
+  const totalDuration=repeat*duration+(repeat-1)*gap;
   const sampleRate=22050;
-  const duration=0.35;
-  const total=Math.floor(sampleRate*duration);
+  const total=Math.floor(sampleRate*totalDuration);
   const buffer=new ArrayBuffer(44+total*2);
   const view=new DataView(buffer);
   const writeStr=(o,s)=>{for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i))};
@@ -759,13 +798,17 @@ function buildReminderWavUrl(){
   writeStr(36,'data'); view.setUint32(40,total*2,true);
   for(let i=0;i<total;i++){
     const t=i/sampleRate;
-    const freq=988;
-    const env=Math.min(1,t*30)*Math.min(1,(duration-t)*24);
-    const s=Math.sin(2*Math.PI*freq*t)*0.38*env;
+    const unit=duration+gap;
+    const local=t%unit;
+    const active=local<duration;
+    const env=active?Math.min(1,local*30)*Math.min(1,(duration-local)*24):0;
+    const base=Math.sin(2*Math.PI*preset.freq*t);
+    const sq=Math.sign(base);
+    const wave=preset.wave==='square'?sq:base;
+    const s=wave*preset.gain*env;
     view.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true);
   }
-  reminderAudioUrl=URL.createObjectURL(new Blob([buffer],{type:'audio/wav'}));
-  return reminderAudioUrl;
+  return URL.createObjectURL(new Blob([buffer],{type:'audio/wav'}));
 }
 
 async function armReminderSound(){
@@ -781,7 +824,6 @@ async function armReminderSound(){
       reminderAudioEl.volume=1;
       reminderAudioEl.playsInline=true;
     }
-    // Sblocca l'audio iOS durante un gesto dell'utente.
     reminderAudioEl.muted=true;
     const p=reminderAudioEl.play();
     if(p?.then)await p.catch(()=>{});
@@ -791,11 +833,15 @@ async function armReminderSound(){
   }catch(e){}
 }
 
-async function playReminderSound(){
+async function playReminderSound(opts={}){
+  const type=opts.soundType||'beep';
+  const duration=Math.max(0.12,Math.min(2,Number(opts.soundDuration||0.35)));
+  const repeat=Math.max(1,Math.min(8,Number(opts.soundRepeat||1)));
   let played=false;
   try{
     if(reminderAudioEl){
       reminderAudioEl.pause();
+      reminderAudioEl.src=buildReminderWavUrl({soundType:type,soundDuration:duration,soundRepeat:repeat});
       reminderAudioEl.currentTime=0;
       reminderAudioEl.muted=false;
       reminderAudioEl.volume=1;
@@ -808,21 +854,26 @@ async function playReminderSound(){
     if(!reminderAudioCtx && AudioCtx)reminderAudioCtx=new AudioCtx();
     if(reminderAudioCtx){
       if(reminderAudioCtx.state==='suspended')await reminderAudioCtx.resume().catch(()=>{});
+      const preset=soundPreset(type);
       const now=reminderAudioCtx.currentTime;
-      const osc=reminderAudioCtx.createOscillator();
-      const gain=reminderAudioCtx.createGain();
-      osc.type='sine';
-      osc.frequency.value=988;
-      gain.gain.setValueAtTime(0.0001,now);
-      gain.gain.exponentialRampToValueAtTime(0.22,now+0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001,now+0.32);
-      osc.connect(gain).connect(reminderAudioCtx.destination);
-      osc.start(now);
-      osc.stop(now+0.34);
+      const gap=0.12;
+      for(let idx=0;idx<repeat;idx++){
+        const start=now+idx*(duration+gap);
+        const osc=reminderAudioCtx.createOscillator();
+        const gain=reminderAudioCtx.createGain();
+        osc.type=preset.wave;
+        osc.frequency.value=preset.freq;
+        gain.gain.setValueAtTime(0.0001,start);
+        gain.gain.exponentialRampToValueAtTime(preset.gain,start+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001,start+duration);
+        osc.connect(gain).connect(reminderAudioCtx.destination);
+        osc.start(start);
+        osc.stop(start+duration+0.02);
+      }
       played=true;
     }
   }catch(e){}
-  if(navigator.vibrate)navigator.vibrate(180);
+  if(navigator.vibrate)navigator.vibrate(repeat===1?180:Array.from({length:repeat*2-1},(_,i)=>i%2?100:180));
   return played;
 }
 
@@ -830,7 +881,7 @@ document.addEventListener('pointerdown',armReminderSound,{capture:true});
 document.addEventListener('touchend',armReminderSound,{capture:true});
 document.addEventListener('keydown',armReminderSound,{capture:true});
 
-function scheduleLocalReminder(record){
+function scheduleLocalReminder(record,soundSettings={}){
   const when=(record.reminderDate?record.reminderDate:new Date().toISOString().slice(0,10))+'T'+(record.reminderTime||'');
   const target=new Date(when);
   const delay=target.getTime()-Date.now();
@@ -838,7 +889,7 @@ function scheduleLocalReminder(record){
   if(delay>2147483647)return;
   window.setTimeout(()=>{
     const text=record.actionText||'Promemoria';
-    playReminderSound();
+    playReminderSound(soundSettings);
     if('Notification' in window && Notification.permission==='granted'){
       new Notification(text,{body:'È arrivata l’ora del promemoria.',tag:'ideainapp-reminder-'+record.id});
     }else{
@@ -920,7 +971,7 @@ function executeBuilderAction(a){
     }
     archiveCmp.visible=true;
     saveProjectState();
-    scheduleLocalReminder(record);
+    scheduleLocalReminder(record,a);
     if('Notification' in window && Notification.permission==='default'){
       Notification.requestPermission().catch(()=>{});
     }
@@ -941,11 +992,11 @@ function executeBuilderAction(a){
   }
   if(a.type==='playSound'){
     armReminderSound();
-    playReminderSound();
+    playReminderSound(a);
   }
   if(a.type==='scheduleReminder'){
     const list=projectState.archives?.reminders||[];
-    if(list.length)scheduleLocalReminder(list[list.length-1]);
+    if(list.length)scheduleLocalReminder(list[list.length-1],a);
   }
   if(a.type==='navigate' && a.target && projectState.projectMode==='example')switchPhoneScreen(a.target);
   if(a.type==='openDrawer')toggleDrawer();
@@ -1905,6 +1956,15 @@ const propFieldMode=document.getElementById('propFieldMode');
 const propActionType=document.getElementById('propActionType');
 const propActionTarget=document.getElementById('propActionTarget');
 const propActionValue=document.getElementById('propActionValue');
+const soundActionProps=document.getElementById('soundActionProps');
+const propSoundType=document.getElementById('propSoundType');
+const propSoundDuration=document.getElementById('propSoundDuration');
+const propSoundRepeat=document.getElementById('propSoundRepeat');
+const testSoundBtn=document.getElementById('testSoundBtn');
+function syncSoundActionProps(){
+  if(!soundActionProps)return;
+  soundActionProps.style.display=['playSound','scheduleReminder','saveRecord'].includes(propActionType.value)?'block':'none';
+}
 
 function rgbToHex(rgb){
   if(!rgb)return '#111111';
@@ -2066,11 +2126,26 @@ function saveSelectedBuilderAction(){
   projectState.actions[key]={
     type:propActionType.value,
     target:propActionTarget.value.trim(),
-    value:propActionValue.value
+    value:propActionValue.value,
+    soundType:propSoundType.value,
+    soundDuration:Number(propSoundDuration.value||0.35),
+    soundRepeat:Number(propSoundRepeat.value||1)
   };
   saveProjectState();
 }
-[propActionType,propActionTarget,propActionValue].forEach(x=>x.addEventListener('input',saveSelectedBuilderAction));
+[propActionType,propActionTarget,propActionValue,propSoundType,propSoundDuration,propSoundRepeat].forEach(x=>x.addEventListener('input',()=>{
+  syncSoundActionProps();
+  saveSelectedBuilderAction();
+}));
+propActionType.addEventListener('change',syncSoundActionProps);
+testSoundBtn?.addEventListener('click',()=>{
+  armReminderSound();
+  playReminderSound({
+    soundType:propSoundType.value,
+    soundDuration:Number(propSoundDuration.value||0.35),
+    soundRepeat:Number(propSoundRepeat.value||1)
+  });
+});
 let previewMode=false;
 document.querySelectorAll('.selectable').forEach(el=>el.addEventListener('click',e=>{
   if(previewMode)return;
