@@ -460,7 +460,18 @@ const pathAppMatch=location.pathname.match(/^\/app\/([A-Za-z0-9_-]{8,20})\/?$/);
 const APP_ID=pathAppMatch?.[1] || new URLSearchParams(location.search).get('app');
 const IS_PUBLISHED=!!APP_ID;
 const RUNTIME_KEY=IS_PUBLISHED?'ideainapp_app_'+APP_ID:PROJECT_KEY;
+const DELETED_REMINDERS_KEY=RUNTIME_KEY+'_deleted_reminders';
 const savedRuntime=JSON.parse(localStorage.getItem(RUNTIME_KEY)||'null');
+function getDeletedReminderIds(){
+  try{return new Set(JSON.parse(localStorage.getItem(DELETED_REMINDERS_KEY)||'[]'))}
+  catch{return new Set()}
+}
+function rememberDeletedReminder(id){
+  if(!id)return;
+  const ids=getDeletedReminderIds();
+  ids.add(id);
+  localStorage.setItem(DELETED_REMINDERS_KEY,JSON.stringify([...ids]));
+}
 const projectState=(IS_PUBLISHED?(savedRuntime||{}):JSON.parse(localStorage.getItem(PROJECT_KEY)||'{}'));
 projectState.styles=projectState.styles||{};
 projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredients:[]};
@@ -476,6 +487,10 @@ function normalizeProjectState(){
   projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
   projectState.actions=projectState.actions||{};
   projectState.archives=projectState.archives||{reminders:[]};
+  const deletedReminderIds=getDeletedReminderIds();
+  if(Array.isArray(projectState.archives.reminders) && deletedReminderIds.size){
+    projectState.archives.reminders=projectState.archives.reminders.filter(r=>!deletedReminderIds.has(r?.id));
+  }
   projectState.projectMode=projectState.projectMode||'blank';
   projectState.platform=projectState.platform||'ios';
 
@@ -1328,6 +1343,8 @@ function renderBuilder(){
               if(!previewMode)return;
               const idx=(projectState.archives[archiveKey]||[]).findIndex(x=>x.id===r.id);
               if(idx>=0){
+                const deleted=projectState.archives[archiveKey][idx];
+                if(archiveKey==='reminders')rememberDeletedReminder(deleted?.id);
                 projectState.archives[archiveKey].splice(idx,1);
                 saveProjectState();
                 renderBuilder();
