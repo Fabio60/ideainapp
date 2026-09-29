@@ -56,6 +56,7 @@ Principi:
 - Per riempire/svuotare campi usa setValue/clear; per liste o dati usa addRecord/updateRecord/deleteRecord.
 - Per popup usa openModal/closeModal; per indietro goBack; foto/file pickImage; posizione getLocation; mappa openMap.
 - Se l'utente vuole leggere, riconoscere o estrarre dati da una foto/documento/biglietto, usa analyzeImage. Se serve scegliere prima la foto, concatena pickImage e analyzeImage sulla stessa sorgente.
+- Se il problema riguarda un archivio di biglietti da visita, crea SEMPRE i campi Nome, Cognome, Azienda, Ruolo, Telefono, Email, Sito web e Indirizzo, oltre al componente Foto/File e all'archivio.
 - Per biglietti da visita usa normalmente fields ["nome","cognome","azienda","ruolo","telefono","email","sito","indirizzo"] in properties_json. Se i campi esistono già, analyzeImage li compilerà automaticamente per corrispondenza di etichetta; puoi anche passare fieldMap in properties_json, per esempio {"fields":["nome","telefono"],"fieldMap":{"nome":"Nome","telefono":"Telefono"},"context":"Biglietto da visita"}.
 - Per ricerca/filtri usa filterList e per ordinamento sortList.
 - Per conferme usa confirm; per ritardi delay; per regole tipo "se... allora..." usa condition.
