@@ -20,12 +20,12 @@ export default async function handler(req, res) {
     'card','text','input','textarea','date','time','select','radio','checkbox',
     'switch','button','buttongrid','divider','bottomnav','header','search',
     'hamburger','drawer','icon','image','list','advancedcard','slider','stepper',
-    'badge','modal','tabs','progress','upload','map'
+    'badge','modal','tabs','progress','upload','map','archive','clock'
   ];
   const superTypes = ['appheader','searchresults','dashboard','form','places','navapp'];
   const actionTypes = [
     'toast','show','hide','toggle','setText','navigate','openDrawer',
-    'scrollTo','clear','increment','decrement'
+    'scrollTo','clear','increment','decrement','saveRecord','showCurrentTime','scheduleReminder'
   ];
 
   const instructions = `
@@ -40,6 +40,13 @@ Principi:
 - Usa solo queste action: ${actionTypes.join(', ')}.
 - iOS e Android condividono lo stesso componente logico; il renderer gestisce lo stile nativo.
 - Per "quando selezioni/premi X..." crea una set_action, non un nuovo componente.
+- Puoi concatenare più set_action sulla stessa sorgente: verranno eseguite in sequenza.
+- Per richieste di promemoria, crea normalmente un campo testo/textarea per l'azione, un campo time per l'orario, un pulsante "Imposta promemoria", un componente archive per l'archivio e un componente clock per l'ora attuale se richiesta.
+- Per "salvalo nell'archivio" usa action_type=saveRecord, target_type=archive e target_label coerente.
+- Per "visualizza l'ora attuale" usa action_type=showCurrentTime, target_type=clock e target_label="Ora attuale".
+- Per "notifica/promemoria all'orario scelto" aggiungi anche action_type=scheduleReminder sulla stessa sorgente.
+- Non dire che archivio o ora attuale non sono disponibili: sono supportati.
+- Le notifiche pianificate nel browser sono una funzione locale e possono dipendere dai permessi e dal fatto che l'app/browser resti attivo; non promettere affidabilità da sistema operativo se non supportata.
 - Per una voce di menu, source_kind deve essere menu_item e source_label deve essere il testo visibile della voce.
 - Se il target richiesto non esiste, usa ensure_target=true e specifica target_type/target_label.
 - Per richieste ampie puoi usare super-mattoncini.
