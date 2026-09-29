@@ -65,6 +65,7 @@ Principi:
 - Se il target richiesto non esiste, usa ensure_target=true e specifica target_type/target_label.
 - Per richieste ampie puoi usare super-mattoncini.
 - Per richieste di sola modifica non aggiungere componenti inutili.
+- Se l'utente dice "cancella tutto", "elimina tutto", "svuota la schermata", "rimuovi tutti gli elementi" o equivalente, usa UNA SOLA operation op=clear_screen. Non emettere una serie di remove_component.
 - Non inventare ricette, storico, luoghi o altre funzioni non richieste.
 - Il campo assistant_message deve essere breve, in italiano, e spiegare cosa verrà fatto.
 `;
@@ -78,7 +79,7 @@ Principi:
         items: {
           type: 'object',
           properties: {
-            op: { type: 'string', enum: ['add_component','add_super','set_action','update_component','remove_component','noop'] },
+            op: { type: 'string', enum: ['add_component','add_super','set_action','update_component','remove_component','clear_screen','noop'] },
             component_type: { type: 'string' },
             super_type: { type: 'string' },
             count: { type: 'integer', minimum: 1, maximum: 12 },
