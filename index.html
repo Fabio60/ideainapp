@@ -716,7 +716,7 @@ function componentDefaults(type){
   if(type==='modal')return{id,type,label:'Popup',title:'Titolo popup',text:'Contenuto del popup'};
   if(type==='tabs')return{id,type,label:'Tabs',items:['Tab 1','Tab 2','Tab 3']};
   if(type==='progress')return{id,type,label:'Avanzamento',value:65};
-  if(type==='upload')return{id,type,label:'Foto / File',text:'Aggiungi foto o file'};
+  if(type==='upload')return{id,type,label:'Foto / File',text:'Aggiungi foto o file',accept:'image/*'};
   if(type==='map')return{id,type,label:'Mappa',text:'Mappa / posizione'};
   if(type==='archive')return{id,type,label:'Archivio promemoria',archiveKey:'reminders'};
   if(type==='clock')return{id,type,label:'Ora attuale',format:'HH:MM',align:'center'};
@@ -729,6 +729,9 @@ function addBuilderComponent(type,screen=activeScreenName(),silent=false){
   if(screen==='NuovaIdea')projectState.showBlankStart=false;
   if(type==='bottomnav') projectState.components[screen]=projectState.components[screen].filter(x=>x.type!=='bottomnav');
   projectState.components[screen].push(cmp);
+  if(type==='upload' && !projectState.actions[cmp.id]){
+    projectState.actions[cmp.id]={type:'pickImage',target:cmp.id,value:'',accept:'image/*'};
+  }
   saveProjectState();renderBuilder();
   if(!silent)addMsg('Ho aggiunto '+cmp.label+' nella schermata '+screen+'. Puoi selezionarlo nel mockup e modificarlo.');
   return cmp;
