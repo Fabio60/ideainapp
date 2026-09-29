@@ -417,6 +417,14 @@ function normalizeProjectState(){
 async function loadPublishedAppFromCloud(){
   if(!IS_PUBLISHED)return false;
   try{
+    if(savedRuntime && savedRuntime.components){
+      normalizeProjectState();
+      renderBuilder();
+      setProjectMode(projectState.projectMode==='example'?'example':'blank');
+      if(projectState.projectMode==='example' && projectState.activeScreen)switchPhoneScreen(projectState.activeScreen);
+      updateLiveClocks();
+      return true;
+    }
     const r=await fetch(SUPABASE_URL+'/rest/v1/ideainapp_published_apps?id=eq.'+encodeURIComponent(APP_ID)+'&select=config',{
       headers:{apikey:SUPABASE_KEY}
     });
