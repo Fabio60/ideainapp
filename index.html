@@ -1499,7 +1499,7 @@ function renderBuilder(){
         const title=document.createElement('div');
         title.style.fontWeight='800';
         title.style.marginBottom='8px';
-        title.textContent='Promemoria salvati';
+        title.textContent=cmp.title||cmp.text||cmp.label||'Archivio';
         box.appendChild(title);
         const archiveKey=cmp.archiveKey||'reminders';
         const rows=projectState.archives?.[archiveKey]||[];
@@ -1507,7 +1507,8 @@ function renderBuilder(){
           const empty=document.createElement('div');
           empty.style.opacity='.6';
           empty.style.fontSize='13px';
-          empty.textContent='Nessun promemoria salvato';
+          const archiveName=(cmp.title||cmp.text||cmp.label||'archivio').toLowerCase();
+          empty.textContent='Nessun elemento salvato';
           box.appendChild(empty);
         }else{
           rows.slice().reverse().forEach(r=>{
@@ -1531,7 +1532,7 @@ function renderBuilder(){
             mainWrap.className='reminderSwipeMain';
             const main=document.createElement('div');
             main.style.fontWeight='700';
-            main.textContent=r.actionText||'Promemoria';
+            main.textContent=r.actionText||r.title||r.name||r.text||'Elemento';
             const meta=document.createElement('div');
             meta.style.fontSize='12px';
             meta.style.opacity='.65';
@@ -1557,7 +1558,7 @@ function renderBuilder(){
             edit.onclick=e=>{
               e.stopPropagation();
               if(!previewMode)return;
-              const newText=window.prompt('Azione da svolgere',r.actionText||'');
+              const newText=window.prompt('Modifica elemento',r.actionText||r.title||r.name||r.text||'');
               if(newText===null)return;
               const newTime=window.prompt('Orario del promemoria (HH:MM)',r.reminderTime||'');
               if(newTime===null)return;
