@@ -522,6 +522,8 @@ projectState.demo=projectState.demo||{items:['Latte','Pane'],places:[],ingredien
 projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
 projectState.actions=projectState.actions||{};
 projectState.archives=projectState.archives||{reminders:[]};
+projectState.dataModel=projectState.dataModel||{};
+projectState.appGoal=projectState.appGoal||'';
 projectState.projectMode=projectState.projectMode||'blank';
 projectState.platform=projectState.platform||'ios';
 projectState.theme=projectState.theme||'light';
@@ -533,6 +535,8 @@ function normalizeProjectState(){
   projectState.components=projectState.components||{NuovaIdea:[],Spesa:[],Storico:[],Luoghi:[],Ricette:[]};
   projectState.actions=projectState.actions||{};
   projectState.archives=projectState.archives||{reminders:[]};
+  projectState.dataModel=projectState.dataModel||{};
+  projectState.appGoal=projectState.appGoal||'';
   const deletedReminderIds=getDeletedReminderIds();
   if(Array.isArray(projectState.archives.reminders) && deletedReminderIds.size){
     projectState.archives.reminders=projectState.archives.reminders.filter(r=>!deletedReminderIds.has(r?.id));
@@ -2457,6 +2461,8 @@ function startNewIdea(){
   projectState.components.NuovaIdea=[];
   projectState.actions={};
   projectState.archives={reminders:[],data:[]};
+  projectState.dataModel={};
+  projectState.appGoal='';
   projectState.showBlankStart=true;
   projectState.decisions=[];
   projectState.activeScreen='NuovaIdea';
@@ -2539,6 +2545,9 @@ function compactAIState(){
     projectMode:projectState.projectMode,
     selectedBuilderId,
     selectedBuilderItemIndex,
+    appGoal:projectState.appGoal||'',
+    dataModel:projectState.dataModel||{},
+    archiveKeys:Object.keys(projectState.archives||{}),
     components:comps
   };
 }
@@ -2552,6 +2561,28 @@ function applyAIPlan(plan){
   const done=[];
 
   for(const op of operations){
+    if(op.op==='set_project_goal'){
+      projectState.appGoal=(op.value||op.target_label||'').trim();
+      if(projectState.appGoal)done.push('obiettivo app');
+      continue;
+    }
+
+    if(op.op==='define_collection'){
+      const key=(op.collection_name||op.target_label||'data').trim().toLowerCase().replace(/[^a-z0-9à-ÿ_-]+/gi,'_')||'data';
+      const props=safePropertiesJson(op.properties_json);
+      const fields=Array.isArray(props.fields)?props.fields:[];
+      projectState.dataModel[key]={
+        key,
+        label:props.label||op.target_label||key,
+        fields,
+        primaryField:props.primaryField||'',
+        description:props.description||''
+      };
+      projectState.archives[key]=projectState.archives[key]||[];
+      done.push('dati '+(props.label||op.target_label||key));
+      continue;
+    }
+
     if(op.op==='add_component'){
       const n=Math.max(1,Math.min(12,Number(op.count)||1));
       for(let i=0;i<n;i++){
