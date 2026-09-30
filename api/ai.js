@@ -39,6 +39,13 @@ Devi produrre SOLO il piano strutturato previsto dallo schema.
 
 Principi:
 - L'utente descrive obiettivi; tu scegli i mattoncini adatti.
+- Prima dei componenti interpreta il problema: chi usa l'app, quali informazioni entrano, quali risultati deve vedere e quali azioni deve poter fare.
+- Se la richiesta descrive una nuova app o un nuovo obiettivo ampio, emetti prima set_project_goal con una frase sintetica che rappresenta il risultato desiderato.
+- Se l'app gestisce dati, deduci autonomamente le entità principali e crea una define_collection per ciascuna. In properties_json usa {"label":"Clienti","primaryField":"Nome","description":"...","fields":[{"name":"Nome","type":"text"},{"name":"Telefono","type":"phone"}]}.
+- Tipi campo consigliati nel modello semantico: text, number, currency, percentage, date, time, email, phone, url, boolean, category, image.
+- Il dataModel è memoria strutturale del progetto: usalo nei turni successivi per capire riferimenti come "questi dati", "aggiungi la media", "mettilo a torta", "solo questo mese".
+- Non mostrare all'utente concetti tecnici come collection, archiveKey, schema, query o action. Sono dettagli interni.
+- L'utente non deve progettare il database o scegliere i mattoncini: deduci tu la soluzione minima utile.
 - Usa solo questi componenti: ${componentTypes.join(', ')}.
 - Usa solo questi super-mattoncini: ${superTypes.join(', ')}.
 - Usa solo queste action: ${actionTypes.join(', ')}.
@@ -54,6 +61,9 @@ Principi:
 - Per un numero riepilogativo usa kpi con properties_json come {"title":"Totale vendite","archiveKey":"vendite","aggregate":"sum","field":"Importo","prefix":"€ "}. aggregate può essere count,sum,avg,min,max.
 - Se l'utente dice "totale", "somma", "media", "quanti", "minimo", "massimo", deduci autonomamente aggregazione e campo.
 - Quando una app raccoglie dati, crea una struttura coerente: campi → pulsante salva → archivio nominato → eventuale lista/tabella/KPI/grafico.
+- Se la richiesta è ampia, non limitarti a un singolo componente: costruisci una prima versione completa e utilizzabile con inserimento dati, salvataggio e almeno una visualizzazione coerente quando utile.
+- Se l'utente esprime un obiettivo analitico ("capire chi vende di più", "quanto spendo", "come sta andando"), deduci KPI, aggregazioni, filtri e grafici necessari.
+- Se l'utente modifica una richiesta precedente con pronomi o riferimenti brevi ("fallo a torta", "aggiungi la media", "solo questo mese"), usa appGoal, dataModel e componenti esistenti per identificare il referente senza chiedere chiarimenti quando è ragionevolmente univoco.
 - Per "visualizza l'ora attuale" usa action_type=showCurrentTime, target_type=clock e target_label="Ora attuale".
 - Per "notifica/promemoria all'orario scelto" aggiungi anche action_type=scheduleReminder sulla stessa sorgente.
 - Per richieste come "riproduci suono", "suona", "fai un beep" o "metti un suono sul pulsante X" usa action_type=playSound sulla sorgente indicata.
@@ -95,7 +105,7 @@ Principi:
         items: {
           type: 'object',
           properties: {
-            op: { type: 'string', enum: ['add_component','add_super','set_action','update_component','remove_component','clear_screen','noop'] },
+            op: { type: 'string', enum: ['add_component','add_super','set_action','update_component','remove_component','clear_screen','define_collection','set_project_goal','noop'] },
             component_type: { type: 'string' },
             super_type: { type: 'string' },
             count: { type: 'integer', minimum: 1, maximum: 12 },
@@ -106,11 +116,12 @@ Principi:
             action_type: { type: 'string' },
             value: { type: 'string' },
             ensure_target: { type: 'boolean' },
-            properties_json: { type: 'string' }
+            properties_json: { type: 'string' },
+            collection_name: { type: 'string' }
           },
           required: [
             'op','component_type','super_type','count','source_kind','source_label',
-            'target_type','target_label','action_type','value','ensure_target','properties_json'
+            'target_type','target_label','action_type','value','ensure_target','properties_json','collection_name'
           ],
           additionalProperties: false
         }
@@ -124,6 +135,8 @@ Principi:
     platform: state?.platform || 'ios',
     activeScreen: state?.activeScreen || 'NuovaIdea',
     projectMode: state?.projectMode || 'blank',
+    appGoal: state?.appGoal || '',
+    dataModel: state?.dataModel || {},
     components: state?.components || [],
     archiveKeys: state?.archiveKeys || []
   };
