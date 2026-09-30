@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     'card','text','input','textarea','date','time','select','radio','checkbox',
     'switch','button','buttongrid','divider','bottomnav','header','search',
     'hamburger','drawer','icon','image','list','advancedcard','slider','stepper',
-    'badge','modal','tabs','progress','upload','map','archive','clock'
+    'badge','modal','tabs','progress','chart','upload','map','archive','clock'
   ];
   const superTypes = ['appheader','searchresults','dashboard','form','places','navapp'];
   const actionTypes = [
@@ -60,6 +60,11 @@ Principi:
 - Se il problema riguarda un archivio di biglietti da visita, crea SEMPRE i campi Nome, Cognome, Azienda, Ruolo, Telefono, Email, Sito web e Indirizzo, oltre al componente Foto/File e all'archivio.
 - Per biglietti da visita usa normalmente fields ["nome","cognome","azienda","ruolo","telefono","email","sito","indirizzo"] in properties_json. Se i campi esistono già, analyzeImage li compilerà automaticamente per corrispondenza di etichetta; puoi anche passare fieldMap in properties_json, per esempio {"fields":["nome","telefono"],"fieldMap":{"nome":"Nome","telefono":"Telefono"},"context":"Biglietto da visita"}.
 - Per ricerca/filtri usa filterList e per ordinamento sortList.
+- Se l'utente vuole visualizzare dati con grafici, usa component_type=chart.
+- Il chart supporta chartType "bar", "pie" e "line". Passa i dati in properties_json come {"title":"Titolo","chartType":"bar","data":[{"label":"A","value":10},{"label":"B","value":20}]}.
+- Scegli bar per confrontare categorie, pie per percentuali/parti di un totale con poche categorie, line per andamento nel tempo.
+- Se il grafico deve derivare da dati salvati nell'app, usa properties_json con {"archiveKey":"reminders","groupBy":"Nome campo"}; il grafico si aggiorna leggendo l'archivio locale.
+- L'utente non deve conoscere il tipo tecnico di grafico: deducilo dalla sua descrizione.
 - Per conferme usa confirm; per ritardi delay; per regole tipo "se... allora..." usa condition.
 - Per vibrazione usa vibrate; notifica immediata notify; calendario addCalendarEvent; servizi esterni/API/webhook callWebhook; per portare il cursore in un campo focusField.
 - Per action avanzate inserisci i parametri extra in properties_json, ad esempio {"operator":"notEmpty"}, {"ms":1000}, {"method":"POST"}.
