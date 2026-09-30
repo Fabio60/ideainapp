@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     'card','text','input','textarea','date','time','select','radio','checkbox',
     'switch','button','buttongrid','divider','bottomnav','header','search',
     'hamburger','drawer','icon','image','list','advancedcard','slider','stepper',
-    'badge','modal','tabs','progress','chart','upload','map','archive','clock'
+    'badge','modal','tabs','progress','chart','kpi','datatable','dynamiclist','upload','map','archive','clock'
   ];
   const superTypes = ['appheader','searchresults','dashboard','form','places','navapp'];
   const actionTypes = [
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     'openUrl','callPhone','sendEmail','openWhatsApp','share','copyClipboard','setValue',
     'addRecord','updateRecord','deleteRecord','openModal','closeModal','goBack','pickImage',
     'getLocation','openMap','filterList','sortList','confirm','delay','condition','vibrate',
-    'notify','addCalendarEvent','callWebhook','focusField','analyzeImage'
+    'notify','addCalendarEvent','callWebhook','focusField','analyzeImage','calculate','resetForm'
   ];
 
   const instructions = `
@@ -47,6 +47,13 @@ Principi:
 - Puoi concatenare più set_action sulla stessa sorgente: verranno eseguite in sequenza.
 - Per richieste di promemoria, crea normalmente un campo testo/textarea per l'azione, un campo time per l'orario, un pulsante "Imposta promemoria", un componente archive per l'archivio e un componente clock per l'ora attuale se richiesta.
 - Per "salvalo nell'archivio" usa action_type=saveRecord, target_type=archive e target_label coerente.
+- DATA ENGINE: ogni insieme di dati deve avere un archiveKey semantico e stabile, per esempio "clienti", "vendite", "spese", "visite", "prodotti", "biglietti". Non usare "reminders" salvo che sia davvero un promemoria.
+- Per salvare dati generici usa saveRecord con properties_json={"archiveKey":"clienti"} (o la raccolta corretta). Il motore raccoglie automaticamente i campi della schermata.
+- Per azzerare il modulo dopo il salvataggio usa resetForm sulla stessa sorgente.
+- Per visualizzare record usa dynamiclist o datatable collegati allo stesso archiveKey.
+- Per un numero riepilogativo usa kpi con properties_json come {"title":"Totale vendite","archiveKey":"vendite","aggregate":"sum","field":"Importo","prefix":"€ "}. aggregate può essere count,sum,avg,min,max.
+- Se l'utente dice "totale", "somma", "media", "quanti", "minimo", "massimo", deduci autonomamente aggregazione e campo.
+- Quando una app raccoglie dati, crea una struttura coerente: campi → pulsante salva → archivio nominato → eventuale lista/tabella/KPI/grafico.
 - Per "visualizza l'ora attuale" usa action_type=showCurrentTime, target_type=clock e target_label="Ora attuale".
 - Per "notifica/promemoria all'orario scelto" aggiungi anche action_type=scheduleReminder sulla stessa sorgente.
 - Per richieste come "riproduci suono", "suona", "fai un beep" o "metti un suono sul pulsante X" usa action_type=playSound sulla sorgente indicata.
@@ -55,7 +62,7 @@ Principi:
 - Per "apri un sito/link" usa openUrl; telefono callPhone; email sendEmail; WhatsApp openWhatsApp; condivisione share; copia copyClipboard.
 - Per riempire/svuotare campi usa setValue/clear; per liste o dati usa addRecord/updateRecord/deleteRecord.
 - Per popup usa openModal/closeModal; per indietro goBack; foto/file pickImage; posizione getLocation; mappa openMap.
-- Se l'utente chiede "visualizza/mostra i dati salvati", "vedi biglietti salvati", "apri archivio" o equivalente, crea o riusa un modal con properties_json={"mode":"archive","archiveKey":"reminders","title":"Biglietti salvati","visible":false} e collega la sorgente con openModal. Non creare un popup statico di solo testo.
+- Se l'utente chiede "visualizza/mostra i dati salvati", crea una dynamiclist o datatable collegata all'archiveKey corretto; usa un modal con mode="archive" solo quando chiede esplicitamente un popup. Non creare popup statici di solo testo.
 - Se l'utente vuole leggere, riconoscere o estrarre dati da una foto/documento/biglietto, usa analyzeImage. Se serve scegliere prima la foto, concatena pickImage e analyzeImage sulla stessa sorgente.
 - Se il problema riguarda un archivio di biglietti da visita, crea SEMPRE i campi Nome, Cognome, Azienda, Ruolo, Telefono, Email, Sito web e Indirizzo, oltre al componente Foto/File e all'archivio.
 - Per biglietti da visita usa normalmente fields ["nome","cognome","azienda","ruolo","telefono","email","sito","indirizzo"] in properties_json. Se i campi esistono già, analyzeImage li compilerà automaticamente per corrispondenza di etichetta; puoi anche passare fieldMap in properties_json, per esempio {"fields":["nome","telefono"],"fieldMap":{"nome":"Nome","telefono":"Telefono"},"context":"Biglietto da visita"}.
@@ -63,7 +70,7 @@ Principi:
 - Se l'utente vuole visualizzare dati con grafici, usa component_type=chart.
 - Il chart supporta chartType "bar", "pie" e "line". Passa i dati in properties_json come {"title":"Titolo","chartType":"bar","data":[{"label":"A","value":10},{"label":"B","value":20}]}.
 - Scegli bar per confrontare categorie, pie per percentuali/parti di un totale con poche categorie, line per andamento nel tempo.
-- Se il grafico deve derivare da dati salvati nell'app, usa properties_json con {"archiveKey":"reminders","groupBy":"Nome campo"}; il grafico si aggiorna leggendo l'archivio locale.
+- Se il grafico deve derivare da dati salvati nell'app, usa properties_json con l'archiveKey semantico corretto, per esempio {"archiveKey":"vendite","groupBy":"Categoria"}; il grafico si aggiorna leggendo l'archivio locale.
 - L'utente non deve conoscere il tipo tecnico di grafico: deducilo dalla sua descrizione.
 - Per conferme usa confirm; per ritardi delay; per regole tipo "se... allora..." usa condition.
 - Per vibrazione usa vibrate; notifica immediata notify; calendario addCalendarEvent; servizi esterni/API/webhook callWebhook; per portare il cursore in un campo focusField.
@@ -117,7 +124,8 @@ Principi:
     platform: state?.platform || 'ios',
     activeScreen: state?.activeScreen || 'NuovaIdea',
     projectMode: state?.projectMode || 'blank',
-    components: state?.components || []
+    components: state?.components || [],
+    archiveKeys: state?.archiveKeys || []
   };
 
   try {
