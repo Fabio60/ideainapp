@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     'card','text','input','textarea','date','time','select','radio','checkbox',
     'switch','button','buttongrid','divider','bottomnav','header','search',
     'hamburger','drawer','icon','image','list','advancedcard','slider','stepper',
-    'badge','modal','tabs','progress','chart','kpi','datatable','dynamiclist','upload','map','archive','clock'
+    'badge','modal','tabs','progress','chart','kpi','datatable','dynamiclist','emailinbox','upload','map','archive','clock'
   ];
   const superTypes = ['appheader','searchresults','dashboard','form','places','navapp'];
   const actionTypes = [
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     'openUrl','callPhone','sendEmail','openWhatsApp','share','copyClipboard','setValue',
     'addRecord','updateRecord','deleteRecord','openModal','closeModal','goBack','pickImage',
     'getLocation','openMap','filterList','sortList','confirm','delay','condition','vibrate',
-    'notify','addCalendarEvent','callWebhook','focusField','analyzeImage','calculate','resetForm'
+    'notify','addCalendarEvent','callWebhook','focusField','analyzeImage','calculate','resetForm','refreshInbox'
   ];
 
   const instructions = `
@@ -69,7 +69,12 @@ Principi:
 - Per richieste come "riproduci suono", "suona", "fai un beep" o "metti un suono sul pulsante X" usa action_type=playSound sulla sorgente indicata.
 - playSound è supportata e può essere configurata dal pannello Proprietà con tipo, durata e ripetizioni.
 - L'utente NON deve conoscere i nomi delle action: interpreta il problema descritto e scegli autonomamente le action necessarie.
-- Per "apri un sito/link" usa openUrl; telefono callPhone; email sendEmail; WhatsApp openWhatsApp; condivisione share; copia copyClipboard.
+- Per "apri un sito/link" usa openUrl; telefono callPhone; WhatsApp openWhatsApp; condivisione share; copia copyClipboard.
+- EMAIL ENGINE: per inviare una vera email usa sendEmail. In properties_json puoi usare {"to":"cliente@example.com","subject":"Preventivo","body":"Ciao {{Nome}}, ..."} oppure {"toField":"Email","subject":"Conferma","body":"..."}; i segnaposto {{NomeCampo}} vengono sostituiti con i valori correnti del modulo.
+- Se l'invio server non è configurato, l'app degrada automaticamente all'apertura del client email, senza rompere il flusso.
+- Per app che devono ricevere/leggere email, usa component_type=emailinbox e aggiungi refreshInbox quando serve un pulsante "Aggiorna posta". Le email ricevute vengono anche rese disponibili nell'archivio interno "email" per liste, tabelle, KPI e automazioni.
+- Se l'utente dice "quando salvo/inserisco X invia una email a Y", concatena saveRecord e sendEmail sulla stessa sorgente e deduci destinatario, oggetto e testo dai campi esistenti.
+- Se chiede "rispondi al mittente" o "invia conferma", usa l'indirizzo email presente nei dati come toField quando disponibile.
 - Per riempire/svuotare campi usa setValue/clear; per liste o dati usa addRecord/updateRecord/deleteRecord.
 - Per popup usa openModal/closeModal; per indietro goBack; foto/file pickImage; posizione getLocation; mappa openMap.
 - Se l'utente chiede "visualizza/mostra i dati salvati", crea una dynamiclist o datatable collegata all'archiveKey corretto; usa un modal con mode="archive" solo quando chiede esplicitamente un popup. Non creare popup statici di solo testo.
@@ -138,7 +143,9 @@ Principi:
     appGoal: state?.appGoal || '',
     dataModel: state?.dataModel || {},
     components: state?.components || [],
-    archiveKeys: state?.archiveKeys || []
+    archiveKeys: state?.archiveKeys || [],
+    emailEnabled: state?.emailEnabled || false,
+    emailAppId: state?.emailAppId || ''
   };
 
   try {
