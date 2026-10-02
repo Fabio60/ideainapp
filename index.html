@@ -2215,7 +2215,7 @@ function renderBuilder(){
         const title=document.createElement('div');
         title.style.fontWeight='800';
         title.style.marginBottom='8px';
-        title.textContent=cmp.title||cmp.text||cmp.label||'Archivio';
+        title.textContent=cmp.text||cmp.title||cmp.label||'Archivio';
         box.appendChild(title);
         const archiveKey=cmp.archiveKey||'reminders';
         const rows=projectState.archives?.[archiveKey]||[];
@@ -2223,7 +2223,7 @@ function renderBuilder(){
           const empty=document.createElement('div');
           empty.style.opacity='.6';
           empty.style.fontSize='13px';
-          const archiveName=(cmp.title||cmp.text||cmp.label||'archivio').toLowerCase();
+          const archiveName=(cmp.text||cmp.title||cmp.label||'archivio').toLowerCase();
           empty.textContent='Nessun elemento salvato';
           box.appendChild(empty);
         }else{
