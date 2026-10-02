@@ -681,20 +681,9 @@ async function loadPublishedAppFromCloud(){
       if(Array.isArray(runtime.emailInbox))projectState.emailInbox=runtime.emailInbox;
       if(runtime.emailAppId)projectState.emailAppId=runtime.emailAppId;
 
-      const runtimeById=new Map();
-      for(const list of Object.values(runtime.components||{})){
-        for(const cmp of (list||[]))runtimeById.set(cmp.id,cmp);
-      }
-      for(const list of Object.values(projectState.components||{})){
-        for(const cmp of (list||[])){
-          const prev=runtimeById.get(cmp.id);
-          if(!prev)continue;
-          if(Object.prototype.hasOwnProperty.call(prev,'value'))cmp.value=prev.value;
-          if(Object.prototype.hasOwnProperty.call(prev,'visible'))cmp.visible=prev.visible;
-          if(Object.prototype.hasOwnProperty.call(prev,'hasImage'))cmp.hasImage=prev.hasImage;
-          if(Object.prototype.hasOwnProperty.call(prev,'fileName'))cmp.fileName=prev.fileName;
-        }
-      }
+      // Non sovrascrivere i valori dei componenti con una vecchia sessione:
+      // all'apertura l'app deve essere identica al mockup pubblicato.
+      // Persistono solo gli archivi/dati generati, non lo stato visuale dei campi.
     }
 
     normalizeProjectState();
