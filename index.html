@@ -3151,7 +3151,10 @@ function updateSelectedStyle(){
       cmp.style.textAlign=propTextAlign.value||'center';
     }
     cmp.visible=propVisible.checked;
-    if(['input','textarea','date','search'].includes(cmp.type)) cmp.placeholder=propText.value;
+    if(cmp.type==='date'){
+      cmp.label=propText.value||cmp.label;
+      cmp.placeholder=propText.value||cmp.placeholder;
+    }else if(['input','textarea','search'].includes(cmp.type)) cmp.placeholder=propText.value;
     else if(['select','radio'].includes(cmp.type)) cmp.label=propText.value||cmp.label;
     else if(['header','drawer','modal','advancedcard'].includes(cmp.type)) cmp.title=propText.value||cmp.title;
     else cmp.text=propText.value;
